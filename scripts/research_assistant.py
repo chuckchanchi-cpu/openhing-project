@@ -3,7 +3,9 @@ Openhing 研究助手 — CrewAI 原型
 
 使用方法:
 1. pip install crewai
-2. 設定環境變數 OPENAI_API_KEY（或其他 LLM API key）
+2. 設定環境變數:
+   - OPENAI_API_KEY（或其他 LLM API key）
+   - SERPER_API_KEY（用於網頁搜索，可選）
 3. python research_assistant.py --topic "你的研究主題"
 
 或者設置為預設主題後直接執行。
@@ -12,6 +14,13 @@ Openhing 研究助手 — CrewAI 原型
 import os
 import sys
 from crewai import Agent, Task, Crew, Process
+
+# 嘗試載入 Serper 搜索工具
+try:
+    from langchain_community.tools import DuckDuckGoSearchRun
+    has_search = True
+except ImportError:
+    has_search = False
 
 # === 設定 ===
 DEFAULT_TOPIC = "2026年AI Agent 採用趨勢與發展"
@@ -24,6 +33,18 @@ def get_topic():
 def create_research_crew(topic: str):
     """建立研究助手 Crew"""
 
+    # 設定搜索工具
+    tools = []
+    if has_search:
+        tools.append(DuckDuckGoSearchRun())
+    if os.getenv("SERPER_API_KEY"):
+        try:
+            from langchain_community.utilities import GoogleSerperAPIWrapper
+            from langchain_community.tools import GoogleSerperRun
+            tools.append(GoogleSerperRun(api_wrapper=GoogleSerperAPIWrapper()))
+        except ImportError:
+            pass
+
     # === Agent 1: 研究員 ===
     researcher = Agent(
         role="高級研究分析師",
@@ -32,7 +53,7 @@ def create_research_crew(topic: str):
             "你是一位經驗豐富的研究分析師，擅長從多個來源搜集資訊，"
             "核實事實，並提煉出有價值的見解。你的研究報告以全面和準確著稱。"
         ),
-        tools=[],  # 可加入 search_tool, web_scraper 等
+        tools=tools,
         verbose=True,
         allow_delegation=False,
     )
