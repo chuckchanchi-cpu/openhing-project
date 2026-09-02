@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Python
 __pycache__/
 *.py[cod]
@@ -64,3 +65,13 @@ htmlcov/
 
 # Project specific
 openhing.egg-info/
+=======
+venv/
+.env
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+.idea/
+*.log
+>>>>>>> origin/main
