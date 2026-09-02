@@ -11,7 +11,10 @@ Openhing 研究助手 — CrewAI 原型
 """
 
 import os
+import re
 import sys
+from datetime import datetime
+from pathlib import Path
 from crewai import Agent, Task, Crew, Process
 
 # === 設定 ===
@@ -103,10 +106,13 @@ def create_research_crew(topic: str):
             "2. 主要發現\n"
             "3. 核心趨勢分析\n"
             "4. 未來展望\n"
-            "5. 結論與建議"
+            "5. 結論與建議\n"
+            "請撰寫一篇 **3000-4000 字** 的深度完整文章，"
+            "內容要充實、有具體數據、實例和可執行建議，"
+            "不要精簡或敷衍。"
         ),
         expected_output=(
-            "一篇 1500-2000 字的完整文章，語言流暢、結構清晰。"
+            "一篇 3000-4000 字的深度完整文章，內容充實、數據具體、建議可執行。"
         ),
         agent=writer,
     )
@@ -121,6 +127,11 @@ def create_research_crew(topic: str):
 
     return crew
 
+def safe_filename(topic: str) -> str:
+    """把主題轉成安全的檔案名稱"""
+    name = re.sub(r'[\\/:*?"<>|]', '', topic).strip()
+    return name[:50] or "research"
+
 def main():
     topic = get_topic()
     print(f"\n🚀 Openhing 研究助手 — 開始研究：「{topic}」\n")
@@ -132,6 +143,24 @@ def main():
     print("\n" + "=" * 60)
     print(f"✅ 研究完成！結果：\n")
     print(result)
+
+    # === 自動儲存到檔案 ===
+    try:
+        docs_dir = Path(__file__).resolve().parent.parent / "docs"
+        docs_dir.mkdir(exist_ok=True)
+        fname = f"{datetime.now():%Y%m%d}-{safe_filename(topic)}.md"
+        out_path = docs_dir / fname
+        header = (
+            f"# {topic}\n\n"
+            f"> 由 Openhing 研究助手（CrewAI）自動生成\n"
+            f"> 日期：{datetime.now():%Y-%m-%d %H:%M}\n"
+            f"> 模型：deepseek-v3.2 | 3 Agent 協作（研究員→分析師→寫手）\n\n"
+            "---\n\n"
+        )
+        out_path.write_text(header + str(result), encoding="utf-8")
+        print(f"\n📁 已儲存：{out_path}")
+    except Exception as e:
+        print(f"\n⚠️ 儲存失敗：{e}")
 
 if __name__ == "__main__":
     main()
