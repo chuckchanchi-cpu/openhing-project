@@ -17,6 +17,27 @@ from datetime import datetime
 from pathlib import Path
 from crewai import Agent, Task, Crew, Process
 
+# 嘗試載入搜索工具
+from crewai.tools import tool
+
+def web_search(query: str) -> str:
+    """網上搜索工具：搜尋最新資訊、新聞、數據和報告。輸入搜索關鍵詞，返回搜索結果摘要。"""
+    import warnings
+    warnings.filterwarnings("ignore")
+    from langchain_community.tools import DuckDuckGoSearchRun
+    search = DuckDuckGoSearchRun()
+    try:
+        result = search.invoke(query)
+        return result if result else "（無搜尋結果）"
+    except Exception as e:
+        return f"（搜索失敗: {e}）"
+
+try:
+    web_search_tool = tool(web_search)
+    has_search = True
+except Exception:
+    has_search = False
+
 # === 設定 ===
 DEFAULT_TOPIC = "2026年AI Agent 採用趨勢與發展"
 
@@ -25,17 +46,36 @@ def get_topic():
         return " ".join(sys.argv[2:]) if len(sys.argv) > 2 else DEFAULT_TOPIC
     return DEFAULT_TOPIC
 
+def get_search_tools():
+    """設定搜索工具（Serper 優先，DuckDuckGo 備用）"""
+    tools = []
+    if os.getenv("SERPER_API_KEY"):
+        try:
+            from langchain_community.utilities import GoogleSerperAPIWrapper
+            from langchain_community.tools import GoogleSerperRun
+            tools.append(GoogleSerperRun(api_wrapper=GoogleSerperAPIWrapper()))
+            print("🌐 已啟用 Serper 網上搜索")
+        except Exception as e:
+            print(f"⚠️ Serper 載入失敗（{e}），改用 DuckDuckGo")
+    if not tools and has_search:
+        tools.append(web_search_tool)
+        print("🌐 已啟用 DuckDuckGo 網上搜索")
+    return tools
+
 def create_research_crew(topic: str):
     """建立研究助手 Crew"""
+
+    search_tools = get_search_tools()
 
     # === Agent 1: 研究員 ===
     researcher = Agent(
         role="高級研究分析師",
-        goal=f"對「{topic}」進行全面、深入的研究，找出關鍵數據、趨勢和專家觀點",
+        goal=f"對「{topic}」進行全面、深入的研究，找出關鍵數據、趨勢和專家觀點。請務必使用網上搜索工具查閱最新資料。",
         backstory=(
-            "你是一位經驗豐富的研究分析師，擅長從多個來源搜集資訊，"
-            "核實事實，並提煉出有價值的見解。你的研究報告以全面和準確著稱。"
+            "你是一位經驗豐富的研究分析師，擅長使用網上搜索工具從多個來源搜集資訊，"
+            "核實事實，並提煉出有價值的見解。你的研究報告以全面、準確和包含最新數據著稱。"
         ),
+        tools=search_tools,
         verbose=True,
         allow_delegation=False,
     )
