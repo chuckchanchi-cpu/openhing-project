@@ -1,6 +1,6 @@
 # 🦀 Openhing 完整報告：未來20年年青人努力的方向
 
-![香港人口金字塔對比](resources/images/population_pyramid.png)
+![香港人口金字塔對比](../resources/images/population_pyramid.png)
 
 ---
 
@@ -24,7 +24,7 @@
 │  - 需要什麼技能                                                              │
 │  - 預期就業前景                                                              │
 │                                                                              │
-│  ![香港青年就業趨勢預測](resources/images/youth_employment_trends.png)
+│  ![香港青年就業趨勢預測](../resources/images/youth_employment_trends.png)
 
 ---
 
@@ -44,7 +44,7 @@
 │  - 如何應對自動化取代                                                        │
 │  - 心理適應建議                                                              │
 │                                                                              │
-│  ![5大關鍵方向能量分析](resources/images/direction_energy.png)
+│  ![5大關鍵方向能量分析](../resources/images/direction_energy.png)
 
 ---
 
