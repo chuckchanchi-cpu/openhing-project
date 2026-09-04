@@ -59,25 +59,58 @@ st.subheader("📊 數據視覺化")
 chart_dir = os.path.join(os.path.dirname(__file__), "resources", "charts")
 has_charts = os.path.exists(chart_dir)
 
+
+def load_plotly_figure(html_path):
+    """從 Plotly HTML 提取 figure（用 raw_decode 處理巢狀 JSON）"""
+    import json
+    import re
+    with open(html_path, encoding='utf-8') as f:
+        c = f.read()
+    start = c.find('Plotly.newPlot(')
+    if start == -1:
+        return None
+    seg = c[start + len('Plotly.newPlot('):]
+    m1 = re.match(r'\s*"(.*?)"', seg)
+    if not m1:
+        return None
+    dec = json.JSONDecoder()
+    idx = m1.end()
+    while seg[idx] in ' ,\n\r\t':
+        idx += 1
+    data, end = dec.raw_decode(seg, idx)
+    idx2 = end
+    while seg[idx2] in ' ,\n\r\t':
+        idx2 += 1
+    layout, _ = dec.raw_decode(seg, idx2)
+    # 移除固定尺寸，令圖表自適應
+    layout.pop('width', None)
+    layout.pop('height', None)
+    layout['autosize'] = True
+    return data, layout
+
+
 if has_charts:
     col1, col2, col3 = st.columns(3)
-    
+
     charts = [
         ("population_pyramid.html", "人口金字塔"),
         ("youth_employment_trends.html", "就業趨勢"),
         ("direction_energy.html", "能量分析")
     ]
-    
+
     for i, (chart_file, title) in enumerate(charts):
         chart_path = os.path.join(chart_dir, chart_file)
         with [col1, col2, col3][i]:
             if os.path.exists(chart_path):
                 try:
-                    with open(chart_path, 'r') as f:
-                        html_content = f.read()
-                    # Use streamlit components v1 correctly
-                    import streamlit.components.v1 as components
-                    components.html(html_content, height=500)
+                    fig_data = load_plotly_figure(chart_path)
+                    if fig_data:
+                        import plotly.graph_objects as go
+                        data, layout = fig_data
+                        fig = go.Figure(data=data, layout=layout)
+                        st.plotly_chart(fig, use_container_width=True, key=f"chart_{chart_file}")
+                    else:
+                        st.info(f"{title}: 無法提取圖表數據")
                 except Exception as e:
                     st.error(f"Error loading {title}: {str(e)}")
             else:
@@ -101,9 +134,13 @@ def run_crewai(topic, depth):
         content = f.read()
     
     new_topic = topic.replace('"', "'")
-    content = content.replace(
-        'topic = "AI Agent 喺學術研究應用"',
-        f'topic = "{new_topic}"'
+    # 用 regex 匹配任何預設主題（穩陣過 hardcode 特定字串）
+    import re
+    content = re.sub(
+        r'topic = ".*?"',
+        lambda m: f'topic = "{new_topic}"',
+        content,
+        count=1
     )
     
     # 根據深度調整 max_tokens

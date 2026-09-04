@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <title>八達通忍者：返工大作戰</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Microsoft JhengHei', 'PingFang HK', Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6), 0 0 120px rgba(0, 180, 255, 0.15);
+            cursor: pointer;
+            max-width: 95vw;
+            max-height: 90vh;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width,
+            H = canvas.height;
+
+        // ── 常數 ──
+        const GROUND_Y = 420;
+        const GRAVITY = 1800;
+        const JUMP_VEL = -680;
+        const PLAYER_X = 120;
+        const PLAYER_W = 50;
+        const PLAYER_H = 78;
+        const LEVEL_THRESHOLD = 1400;
+        const MAX_LIVES = 3;
+
+        // ── 遊戲狀態 ──
+        let state = 'start';
+        let score = 0;
+        let lives = MAX_LIVES;
+        let level = 1;
+        let totalDist = 0;
+        let levelDist = 0;
+        let speed = 0;
+        let spawnTimer = 0;
+        let invincibleTimer = 0;
+        let lastTime = performance.now();
+        let animTime = 0;
+        let screenFlash = 0;
+
+        // ── 玩家 ──
+        const player = {
+            y: GROUND_Y - PLAYER_H,
+            vy: 0,
+            onGround: true,
+            animFrame: 0,
+            hitFlash: 0
+        };
+
+        // ── 陣列 ──
+        let obstacles = [];
+        let collectibles = [];
+        let particles = [];
+        let decorations = [];
+
+        // ── 工具函數 ──
+        function roundRect(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function aabb(a, b) {
+            return a.x < b.x + b.width && a.x + a.width > b.x &&
+                a.y < b.y + b.height && a.y + a.height > b.y;
+        }
+
+        function rand(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        // ── 背景繪製 ──
+        function initDecorations() {
+            decorations = [];
+            for (let i = 0; i < 30; i++) {
+                decorations.push({
+                    x: i * 70,
+                    type: Math.random() < 0.4 ? 'pillar' : 'tile',
+                    h: rand(280, 350)
+                });
+            }
+        }
+
+        function updateDecorations(dt) {
+            let s = (state === 'playing') ? speed : 60;
+            for (let d of decorations) {
+                d.x -= s * dt;
+                if (d.x < -80) {
+                    d.x += 30 * 70;
+                }
+            }
+        }
+
+        function drawBackground() {
+            // 漸變背景
+            let g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#1a2a3a');
+            g.addColorStop(0.4, '#2d4a5a');
+            g.addColorStop(0.6, '#3d6a7a');
+            g.addColorStop(1, '#2a3a2a');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+
+            // MTR 月台頂部燈光
+            ctx.fillStyle = 'rgba(255,255,220,0.12)';
+            for (let i = 0; i < 8; i++) {
+                let x = (i * 110 + animTime * 20) % (W + 200) - 100;
+                ctx.beginPath();
+                ctx.ellipse(x, 20, 35, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 月台幕門（背景玻璃）
+            for (let d of decorations) {
+                if (d.type === 'pillar') {
+                    // 幕門支柱
+                    ctx.fillStyle = '#4a6a7a';
+                    roundRect(d.x, 220, 18, 130, 4);
+                    ctx.fillStyle = 'rgba(120,180,200,0.3)';
+                    ctx.fillRect(d.x + 4, 230, 10, 110);
+                    ctx.fillStyle = '#2a4a5a';
+                    ctx.fillRect(d.x, 220, 4, 130);
+                } else {
+                    // 玻璃幕門面板
+                    ctx.fillStyle = 'rgba(100,160,180,0.25)';
+                    ctx.fillRect(d.x, 240, 55, 100);
+                    ctx.strokeStyle = 'rgba(80,130,150,0.4)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(d.x, 240, 55, 100);
+                }
+            }
+
+            // 月台地板
+            let fg = ctx.createLinearGradient(0, GROUND_Y - 30, 0, H);
+            fg.addColorStop(0, '#c9bfa0');
+            fg.addColorStop(0.3, '#b8a882');
+            fg.addColorStop(1, '#8a7a5e');
+            ctx.fillStyle = fg;
+            ctx.fillRect(0, GROUND_Y - 30, W, H - GROUND_Y + 30);
+
+            // 地板磁磚線
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) {
+                let y = GROUND_Y - 30 + i * 14;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+
+            // 黃線
+            let yg = ctx.createLinearGradient(0, GROUND_Y - 8, 0, GROUND_Y + 10);
+            yg.addColorStop(0, '#ffd700');
+            yg.addColorStop(1, '#e8a800');
+            ctx.fillStyle = yg;
+            roundRect(0, GROUND_Y - 8, W, 8, 4);
+            ctx.fillStyle = 'rgba(255,215,0,0.2)';
+            ctx.fillRect(0, GROUND_Y - 14, W, 14);
+
+            // 地板上的月台方向指示
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            for (let i = 0; i < 5; i++) {
+                let x = ((i * 200 + animTime * 50) % (W + 300)) - 150;
+                ctx.beginPath();
+                ctx.moveTo(x, GROUND_Y + 5);
+                ctx.lineTo(x + 15, GROUND_Y + 5);
+                ctx.lineTo(x + 7.5, GROUND_Y + 15);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // 地下鐵道（下方暗影）
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(0, H - 20, W, 20);
+        }
+
+        // ── 玩家繪製 ──
+        function drawPlayer() {
+            let px = PLAYER_X;
+            let py = player.y;
+            let inv = invincibleTimer > 0;
+            if (inv && Math.floor(invincibleTimer * 10) % 2 === 0) return;
+
+            let run = Math.sin(player.animFrame * 0.25) * 10;
+            let legOffset = player.onGround ? run : 0;
+
+            ctx.save();
+
+            // 陰影
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(px + 25, GROUND_Y, 28, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 身體
+            ctx.fillStyle = '#1a1a3e';
+            roundRect(px + 8, py + 18, 34, 40, 8);
+            // 腰帶
+            ctx.fillStyle = '#c0392b';
+            roundRect(px + 8, py + 42, 34, 5, 2);
+
+            // 頭巾
+            ctx.fillStyle = '#e74c3c';
+            roundRect(px + 8, py + 4, 34, 8, 4);
+            // 頭巾飄帶
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(px + 40, py + 8);
+            ctx.quadraticCurveTo(px + 50, py + 2 + Math.sin(animTime * 3) * 3, px + 58, py + 10);
+            ctx.stroke();
+
+            // 頭
+            ctx.fillStyle = '#2a2a4e';
+            ctx.beginPath();
+            ctx.arc(px + 25, py + 12, 13, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 眼
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.ellipse(px + 20, py + 11, 3, 4, -0.2, 0, Math.PI * 2);
+            ctx.ellipse(px + 30, py + 11, 3, 4, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1a1a3e';
+            ctx.beginPath();
+            ctx.ellipse(px + 21, py + 12, 2, 2, 0, 0, Math.PI * 2);
+            ctx.ellipse(px + 31, py + 12, 2, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 手臂
+            ctx.strokeStyle = '#1a1a3e';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            let armFrame = player.onGround ? run : -10;
+            ctx.beginPath();
+            ctx.moveTo(px + 12, py + 26);
+            ctx.lineTo(px + 2 + armFrame * 0.5, py + 40);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(px + 38, py + 26);
+            ctx.lineTo(px + 48 - armFrame * 0.5, py + 40);
+            ctx.stroke();
+
+            // 腿
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.moveTo(px + 16, py + 56);
+            ctx.lineTo(px + 16 + legOffset, py + 70);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(px + 32, py + 56);
+            ctx.lineTo(px + 32 - legOffset, py + 70);
+            ctx.stroke();
+
+            // 鞋
+            ctx.fillStyle = '#c0392b';
+            roundRect(px + 10 + legOffset, py + 67, 15, 7, 3);
+            roundRect(px + 26 - legOffset, py + 67, 15, 7, 3);
+
+            // 武士刀（背脊）
+            ctx.fillStyle = '#2ecc71';
+            roundRect(px + 34, py + 20, 5, 30, 2);
+            ctx.fillStyle = '#95a5a6';
+            roundRect(px + 32, py + 18, 9, 4, 2);
+
+            ctx.restore();
+        }
+
+        // ── 障礙物繪製 ──
+        function drawObstacles() {
+            for (let o of obstacles) {
+                ctx.save();
+                switch (o.type) {
+                    case 'luggageLady': {
+                        // 大媽
+                        ctx.fillStyle = '#e67e22';
+                        roundRect(o.x + 8, o.y + 20, 38, 45, 10);
+                        // 頭
+                        ctx.fillStyle = '#d4a574';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 27, o.y + 15, 12, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 髮髻
+                        ctx.fillStyle = '#5d4037';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 22, o.y + 6, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 眼鏡
+                        ctx.fillStyle = '#fff';
+                        ctx.strokeStyle = '#333';
+                        ctx.strokeRect(o.x + 20, o.y + 12, 10, 6);
+                        ctx.strokeRect(o.x + 32, o.y + 12, 10, 6);
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(o.x + 23, o.y + 14, 3, 2);
+                        ctx.fillRect(o.x + 35, o.y + 14, 3, 2);
+                        // 行李架
+                        ctx.fillStyle = '#8b4513';
+                        roundRect(o.x + 2, o.y + 40, 30, 25, 5);
+                        ctx.fillStyle = '#a0522d';
+                        roundRect(o.x + 4, o.y + 38, 26, 6, 3);
+                        // 行李轆
+                        ctx.fillStyle = '#555';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 10, o.y + 68, 4, 0, Math.PI * 2);
+                        ctx.arc(o.x + 24, o.y + 68, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    }
+                    case 'standingPassenger': {
+                        // 企住嘅人
+                        ctx.fillStyle = '#2c3e50';
+                        roundRect(o.x + 10, o.y + 10, 30, 65, 8);
+                        // 頭
+                        ctx.fillStyle = '#f0c8a0';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 25, o.y + 10, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 頭髮
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 25, o.y + 8, 10, Math.PI, 0);
+                        ctx.fill();
+                        // 袋
+                        ctx.fillStyle = '#7f8c8d';
+                        roundRect(o.x, o.y + 25, 15, 25, 4);
+                        break;
+                    }
+                    case 'phoneGuy': {
+                        // 毒男
+                        ctx.fillStyle = '#7f8c8d';
+                        roundRect(o.x + 6, o.y + 25, 42, 35, 10);
+                        // 頭（屈身向前）
+                        ctx.fillStyle = '#e7c8a0';
+                        ctx.beginPath();
+                        ctx.arc(o.x + 32, o.y + 18, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 電話藍光
+                        ctx.fillStyle = '#00e5ff';
+                        roundRect(o.x + 36, o.y + 22, 6, 10, 2);
+                        ctx.shadowColor = '#00e5ff';
+                        ctx.shadowBlur = 8;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        // 袋
+                        ctx.fillStyle = '#6c5a48';
+                        roundRect(o.x, o.y + 40, 20, 20, 5);
+                        break;
+                    }
+                }
+                ctx.restore();
+            }
+        }
+
+        // ── 收集物品繪製 ──
+        function drawCollectibles() {
+            for (let c of collectibles) {
+                ctx.save();
+                if (c.type === 'seat') {
+                    // 吉位
+                    ctx.fillStyle = '#2ecc71';
+                    roundRect(c.x, c.y + 5, 30, 18, 6);
+                    ctx.fillStyle = '#27ae60';
+                    roundRect(c.x + 5, c.y + 2, 20, 6, 3);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(c.x + 3, c.y + 7, 24, 3);
+                } else {
+                    // 八達通
+                    ctx.fillStyle = '#00bcd4';
+                    roundRect(c.x, c.y, 22, 32, 4);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(c.x + 2, c.y + 2, 18, 10);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 8px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('八達通', c.x + 11, c.y + 26);
+                }
+                ctx.restore();
+            }
+        }
+
+        // ── 粒子 ──
+        function spawnParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 400,
+                    vy: -Math.random() * 300 - 50,
+                    life: 0.4 + Math.random() * 0.6,
+                    maxLife: 0.4 + Math.random() * 0.6,
+                    color: color,
+                    size: 3 + Math.random() * 5
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 500 * dt;
+                p.life -= dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            for (let p of particles) {
+                ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // ── 生成邏輯 ──
+        function spawnEntities() {
+            spawnTimer -= 1 / 60;
+            if (spawnTimer <= 0) {
+                let r = Math.random();
+                if (r < 0.6) {
+                    // 障礙物
+                    let types = ['luggageLady', 'standingPassenger', 'phoneGuy'];
+                    let t = types[Math.floor(Math.random() * types.length)];
+                    let w, h;
+                    switch (t) {
+                        case 'luggageLady':
+                            w = 60;
+                            h = 75;
+                            break;
+                        case 'standingPassenger':
+                            w = 45;
+                            h = 85;
+                            break;
+                        case 'phoneGuy':
+                            w = 55;
+                            h = 65;
+                            break;
+                    }
+                    obstacles.push({
+                        type: t,
+                        x: W + 50,
+                        y: GROUND_Y - h,
+                        width: w,
+                        height: h
+                    });
+                } else if (r < 0.85) {
+                    // 吉位
+                    let h = 25;
+                    collectibles.push({
+                        type: 'seat',
+                        x: W + 50,
+                        y: GROUND_Y - 85,
+                        width: 30,
+                        height: 25
+                    });
+                } else {
+                    // 八達通（高處）
+                    collectibles.push({
+                        type: 'octopus',
+                        x: W + 50,
+                        y: GROUND_Y - 130,
+                        width: 22,
+                        height: 32
+                    });
+                }
+
+                // 重置計時器
+                let minInt = Math.max(0.35, 0.8 - level * 0.07);
+                let maxInt = Math.max(0.55, 1.2 - level * 0.05);
+                spawnTimer = rand(minInt, maxInt);
+            }
+        }
+
+        // ── 更新邏輯 ──
+        function updatePlaying(dt) {
+            // 速度
+            speed = 280 + (level - 1) * 55;
+            speed = Math.min(speed, 650);
+
+            // 距離
+            let dist = speed * dt;
+            totalDist += dist;
+            levelDist += dist;
+            score += dist * 0.02;
+
+            // 玩家物理
+            if (!player.onGround) {
+                player.vy += GRAVITY * dt;
+                player.y += player.vy * dt;
+                if (player.y >= GROUND_Y - PLAYER_H) {
+                    player.y = GROUND_Y - PLAYER_H;
+                    player.vy = 0;
+                    player.onGround = true;
+                }
+            }
+
+            // 動畫
+            player.animFrame += dt * 8;
+            if (invincibleTimer > 0) invincibleTimer -= dt;
+            if (player.hitFlash > 0) player.hitFlash -= dt;
+
+            // 生成
+            spawnEntities();
+
+            // 更新障礙物
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.x -= speed * dt;
+                if (o.x + o.width < -50) {
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // 碰撞檢測
+                if (invincibleTimer <= 0) {
+                    let pb = {
+                        x: PLAYER_X + 5,
+                        y: player.y + 8,
+                        width: PLAYER_W - 10,
+                        height: PLAYER_H - 15
+                    };
+                    let ob = {
+                        x: o.x + 8,
+                        y: o.y + 5,
+                        width: o.width - 16,
+                        height: o.height - 5
+                    };
+                    if (aabb(pb, ob)) {
+                        lives--;
+                        invincibleTimer = 1.2;
+                        player.hitFlash = 0.5;
+                        player.vy = -300;
+                        player.onGround = false;
+                        screenFlash = 0.2;
+                        spawnParticles(PLAYER_X + 25, player.y + 40, '#ff6b6b', 12);
+                        if (lives <= 0) {
+                            state = 'gameOver';
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 更新收集品
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                let c = collectibles[i];
+                c.x -= speed * dt;
+                if (c.x + c.width < -50) {
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                // 碰撞
+                let pb = {
+                    x: PLAYER_X + 5,
+                    y: player.y + 8,
+                    width: PLAYER_W - 10,
+                    height: PLAYER_H - 15
+                };
+                let cb = {
+                    x: c.x,
+                    y: c.y,
+                    width: c.width,
+                    height: c.height
+                };
+                if (aabb(pb, cb)) {
+                    if (c.type === 'seat') {
+                        score += 10;
+                        spawnParticles(c.x + 15, c.y + 10, '#2ecc71', 8);
+                    } else {
+                        score += 20;
+                        spawnParticles(c.x + 11, c.y + 16, '#00bcd4', 10);
+                    }
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // 關卡進度
+            if (levelDist >= LEVEL_THRESHOLD) {
+                state = 'levelComplete';
+            }
+
+            // 畫面閃爍
+            if (screenFlash > 0) screenFlash -= dt;
+        }
+
+        // ── 重置遊戲 ──
+        function resetGame() {
+            score = 0;
+            lives = MAX_LIVES;
+            level = 1;
+            totalDist = 0;
+            levelDist = 0;
+            speed = 280;
+            spawnTimer = 1;
+            invincibleTimer = 0;
+            obstacles = [];
+            collectibles = [];
+            particles = [];
+            player.y = GROUND_Y - PLAYER_H;
+            player.vy = 0;
+            player.onGround = true;
+            player.animFrame = 0;
+            player.hitFlash = 0;
+            screenFlash = 0;
+            state = 'playing';
+            initDecorations();
+        }
+
+        // ── UI 繪製 ──
+        function drawUI() {
+            // 分數
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            roundRect(10, 10, 160, 38, 10);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🪙 ' + Math.floor(score).toLocaleString(), 22, 38);
+
+            // 生命
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            roundRect(180, 10, 110, 38, 10);
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            let heartStr = '';
+            for (let i = 0; i < lives; i++) heartStr += '❤️ ';
+            for (let i = lives; i < MAX_LIVES; i++) heartStr += '🖤 ';
+            ctx.fillText(heartStr.trim(), 235, 35);
+
+            // 關卡
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            roundRect(300, 10, 150, 38, 10);
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 16px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('關卡 ' + level, 375, 38);
+
+            // 進度條
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            roundRect(460, 10, 330, 20, 10);
+            ctx.fillStyle = '#ffd700';
+            let pct = Math.min(1, levelDist / LEVEL_THRESHOLD);
+            roundRect(462, 12, 326 * pct, 16, 8);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText('月台進度', 625, 23);
+
+            // 速度顯示
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            roundRect(460, 36, 330, 20, 6);
+            ctx.fillStyle = '#00e5ff';
+            ctx.font = 'bold 12px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚡ ' + Math.floor(speed) + ' km/h', 625, 52);
+        }
+
+        // ── 開始畫面 ──
+        function drawStartScreen() {
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillRect(0, 0, W, H);
+
+            // 標題
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 52px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 30;
+            ctx.fillText('🥷 八達通忍者', W / 2, 140);
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#00e5ff';
+            ctx.font = 'bold 32px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.shadowColor = '#00e5ff';
+            ctx.shadowBlur = 20;
+            ctx.fillText('返工大作戰', W / 2, 180);
+            ctx.shadowBlur = 0;
+
+            // 分隔線
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillRect(W / 2 - 150, 200, 300, 2);
+
+            // 說明
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.fillText('🕹️ 按「空白鍵」或「點擊」跳躍', W / 2, 250);
+            ctx.fillText('避開障礙物：', W / 2, 290);
+            ctx.fillText('🧳 拖行李大媽  🧍 企門口乘客  📱 掛住睇電話毒男', W / 2, 318);
+            ctx.fillText('接住：', W / 2, 350);
+            ctx.fillText('💺 吉位 (+10)   🪪 八達通增值 (+20)', W / 2, 378);
+
+            // 開始提示
+            let blink = Math.sin(animTime * 4) > 0;
+            if (blink) {
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 24px "Microsoft JhengHei", Arial, sans-serif';
+                ctx.fillText('按 空白鍵 開始！', W / 2, 430);
+            }
+        }
+
+        // ── 關卡完成畫面 ──
+        function drawLevelCompleteScreen() {
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = 'bold 42px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.shadowColor = '#2ecc71';
+            ctx.shadowBlur = 25;
+            ctx.fillText('✅ 月台完成！', W / 2, 180);
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.fillText('到達關卡 ' + level + ' 嘅盡頭！', W / 2, 230);
+            ctx.fillText('目前分數：' + Math.floor(score).toLocaleString(), W / 2, 270);
+
+            let blink = Math.sin(animTime * 4) > 0;
+            if (blink) {
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 24px "Microsoft JhengHei", Arial, sans-serif';
+                ctx.fillText('按 空白鍵 進入下一月台 →', W / 2, 350);
+            }
+        }
+
+        // ── 結束畫面 ──
+        function drawGameOverScreen() {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = 'bold 48px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.shadowColor = '#ff6b6b';
+            ctx.shadowBlur = 30;
+            ctx.fillText('💀 返工失敗！', W / 2, 140);
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 22px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.fillText('你被逼遲到...', W / 2, 190);
+
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 28px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.fillText('最終分數：' + Math.floor(score).toLocaleString(), W / 2, 240);
+
+            ctx.fillStyle = '#00e5ff';
+            ctx.font = 'bold 20px "Microsoft JhengHei", Arial, sans-serif';
+            ctx.fillText('到達關卡：第 ' + level + ' 個月台', W / 2, 280);
+
+            let blink = Math.sin(animTime * 4) > 0;
+            if (blink) {
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 24px "Microsoft JhengHei", Arial, sans-serif';
+                ctx.fillText('按 空白鍵 再戰！', W / 2, 360);
+            }
+        }
+
+        // ── 遊戲循環 ──
+        function gameLoop(timestamp) {
+            let dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+            lastTime = timestamp;
+            animTime += dt;
+
+            // 更新
+            if (state === 'playing') {
+                updatePlaying(dt);
+            }
+            updateDecorations(dt);
+            updateParticles(dt);
+
+            // 繪製
+            ctx.clearRect(0, 0, W, H);
+            drawBackground();
+
+            if (state === 'playing' || state === 'levelComplete' || state === 'gameOver') {
+                drawObstacles();
+                drawCollectibles();
+                drawPlayer();
+                drawUI();
+            }
+
+            drawParticles();
+
+            // 畫面閃爍
+            if (screenFlash > 0) {
+                ctx.fillStyle = 'rgba(255,0,0,' + (screenFlash * 2) + ')';
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            // 各種畫面
+            if (state === 'start') drawStartScreen();
+            else if (state === 'levelComplete') drawLevelCompleteScreen();
+            else if (state === 'gameOver') drawGameOverScreen();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ── 輸入處理 ──
+        function handleInput(e) {
+            if (e.type === 'keydown' && e.code === 'Space') {
+                e.preventDefault();
+                if (state === 'start') {
+                    resetGame();
+                } else if (state === 'playing') {
+                    doJump();
+                } else if (state === 'levelComplete') {
+                    level++;
+                    levelDist = 0;
+                    obstacles = [];
+                    collectibles = [];
+                    spawnTimer = 1;
+                    state = 'playing';
+                    // 重置玩家位置
+                    player.y = GROUND_Y - PLAYER_H;
+                    player.vy = 0;
+                    player.onGround = true;
+                    player.animFrame = 0;
+                    initDecorations();
+                } else if (state === 'gameOver') {
+                    lives = MAX_LIVES;
+                    resetGame();
+                }
+            }
+
+            if (e.type === 'click' || e.type === 'touchstart') {
+                if (state === 'start') {
+                    resetGame();
+                } else if (state === 'playing') {
+                    doJump();
+                } else if (state === 'levelComplete') {
+                    level++;
+                    levelDist = 0;
+                    obstacles = [];
+                    collectibles = [];
+                    spawnTimer = 1;
+                    state = 'playing';
+                    player.y = GROUND_Y - PLAYER_H;
+                    player.vy = 0;
+                    player.onGround = true;
+                    player.animFrame = 0;
+                    initDecorations();
+                } else if (state === 'gameOver') {
+                    lives = MAX_LIVES;
+                    resetGame();
+                }
+            }
+        }
+
+        function doJump() {
+            if (player.onGround) {
+                player.vy = JUMP_VEL;
+                player.onGround = false;
+                spawnParticles(PLAYER_X + 25, GROUND_Y, 'rgba(255,255,255,0.5)', 5);
+            }
+        }
+
+        // ── 初始化 ──
+        initDecorations();
+        window.addEventListener('keydown', handleInput);
+        canvas.addEventListener('click', handleInput);
+        canvas.addEventListener('touchstart', handleInput);
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
