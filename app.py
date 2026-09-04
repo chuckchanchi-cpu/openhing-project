@@ -75,7 +75,8 @@ if has_charts:
                 try:
                     with open(chart_path, 'r') as f:
                         html_content = f.read()
-                    st.components.v1(html_content, height=400)
+                    # Use iframe instead of components.v1
+                    st.markdown(f'<iframe srcdoc="{html_content.replace(chr(34), chr(39))}" width="100%" height="400" frameborder="0"></iframe>', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error loading {title}: {str(e)}")
             else:
