@@ -14,7 +14,7 @@ from datetime import datetime
 # API 配置
 API_BASE = "https://api.silra.cn/v1"
 API_KEY = "sk-2YmYfA9Rlar5aIzcjpf56T101fKaSFUkLaceH2zPW7TPCSB7"
-MODEL = "deepseek-v3.2"
+MODEL = "qwen-plus"  # 改用免費/便宜嘅模型
 
 def call_llm(prompt):
     """調用 LLM API"""
