@@ -75,8 +75,9 @@ if has_charts:
                 try:
                     with open(chart_path, 'r') as f:
                         html_content = f.read()
-                    # Use iframe instead of components.v1
-                    st.markdown(f'<iframe srcdoc="{html_content.replace(chr(34), chr(39))}" width="100%" height="400" frameborder="0"></iframe>', unsafe_allow_html=True)
+                    # Use streamlit components v1 correctly
+                    import streamlit.components.v1 as components
+                    components.html(html_content, height=400)
                 except Exception as e:
                     st.error(f"Error loading {title}: {str(e)}")
             else:
