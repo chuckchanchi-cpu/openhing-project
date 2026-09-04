@@ -1,0 +1,13 @@
+[general]
+email = ""
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+browser.serverAddress = localhost
+port = 8501
+
+[runner]
+magicEnabled = true
+fastReruns = true

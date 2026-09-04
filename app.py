@@ -39,25 +39,28 @@ with st.sidebar:
             st.session_state.report = result
 
 # 主內容區
+st.title("🦀 Openhing - AI Research Assistant")
+st.caption("Enhancing Human Intelligence through AI Agents | Powered by CrewAI + Serper API")
+
+# 側邊欄
+with st.sidebar:
+    st.header("⚙️ 設置")
+    topic = st.text_input("📚 研究主題", "AI Agent 在學術研究的應用")
+    depth = st.selectbox("📊 報告深度", ["簡化版 (快速)", "完整版 (深入)"])
+    
+    if st.button("🚀 生成報告"):
+        with st.spinner("正在分析..."):
+            result = run_crewai(topic, depth)
+            st.session_state.report = result
+
+# 顯示報告
 if 'report' in st.session_state:
     report = st.session_state.report
     
     st.subheader("📋 報告結果")
-    
-    # 顯示時間戳
     st.caption(f"🕒 生成時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    
-    # Markdown 渲染
     st.markdown(report, unsafe_allow_html=True)
     
-    # 自動保存至文件
-    report_file = f"/Users/fring1117/Desktop/openhing/output/report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-    with open(report_file, 'w', encoding='utf-8') as f:
-        f.write(report)
-    
-    st.success(f"✅ 報告已保存至: {report_file}")
-    
-    # 下載按鈕
     st.download_button(
         label="💾 下載報告 (Markdown)",
         data=report,
