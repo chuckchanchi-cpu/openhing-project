@@ -55,28 +55,33 @@ if 'report' in st.session_state:
 st.divider()
 st.subheader("📊 數據視覺化")
 
-col1, col2, col3 = st.columns(3)
+# 檢查 chart files 是否存在
+chart_dir = os.path.join(os.path.dirname(__file__), "resources", "charts")
+has_charts = os.path.exists(chart_dir)
 
-with col1:
-    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "population_pyramid.html")
-    if os.path.exists(chart_path):
-        st.components.v1(open(chart_path).read(), height=400)
-    else:
-        st.info("Chart not found")
-
-with col2:
-    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "youth_employment_trends.html")
-    if os.path.exists(chart_path):
-        st.components.v1(open(chart_path).read(), height=400)
-    else:
-        st.info("Chart not found")
-
-with col3:
-    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "direction_energy.html")
-    if os.path.exists(chart_path):
-        st.components.v1(open(chart_path).read(), height=400)
-    else:
-        st.info("Chart not found")
+if has_charts:
+    col1, col2, col3 = st.columns(3)
+    
+    charts = [
+        ("population_pyramid.html", "人口金字塔"),
+        ("youth_employment_trends.html", "就業趨勢"),
+        ("direction_energy.html", "能量分析")
+    ]
+    
+    for i, (chart_file, title) in enumerate(charts):
+        chart_path = os.path.join(chart_dir, chart_file)
+        with [col1, col2, col3][i]:
+            if os.path.exists(chart_path):
+                try:
+                    with open(chart_path, 'r') as f:
+                        html_content = f.read()
+                    st.components.v1(html_content, height=400)
+                except Exception as e:
+                    st.error(f"Error loading {title}: {str(e)}")
+            else:
+                st.info(f"{title} chart not found")
+else:
+    st.info("Chart directory not found. Charts will be available after deployment.")
 
 # 底部
 st.divider()
