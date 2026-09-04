@@ -77,7 +77,7 @@ if has_charts:
                         html_content = f.read()
                     # Use streamlit components v1 correctly
                     import streamlit.components.v1 as components
-                    components.html(html_content, height=400)
+                    components.html(html_content, height=500)
                 except Exception as e:
                     st.error(f"Error loading {title}: {str(e)}")
             else:
