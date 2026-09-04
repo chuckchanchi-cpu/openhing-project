@@ -13,7 +13,6 @@
 import streamlit as st
 import subprocess
 import os
-import json
 from datetime import datetime
 
 # 配置
@@ -23,22 +22,6 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🦀 Openhing - AI Research Assistant")
-st.caption("Enhancing Human Intelligence through AI Agents")
-
-# 側邊欄
-with st.sidebar:
-    st.header("⚙️ 設置")
-    topic = st.text_input("📚 研究主題", "AI Agent 在學術研究的應用")
-    depth = st.selectbox("📊 報告深度", ["簡化版 (快速)", "完整版 (深入)"])
-    
-    if st.button("🚀 生成報告"):
-        with st.spinner("正在分析..."):
-            # 調用 CrewAI v2 API
-            result = run_crewai(topic, depth)
-            st.session_state.report = result
-
-# 主內容區
 st.title("🦀 Openhing - AI Research Assistant")
 st.caption("Enhancing Human Intelligence through AI Agents | Powered by CrewAI + Serper API")
 
@@ -75,13 +58,25 @@ st.subheader("📊 數據視覺化")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.html_embed(open('/Users/fring1117/Desktop/openhing/resources/charts/population_pyramid.html').read(), width=600, height=400)
+    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "population_pyramid.html")
+    if os.path.exists(chart_path):
+        st.components.v1(open(chart_path).read(), height=400)
+    else:
+        st.info("Chart not found")
 
 with col2:
-    st.html_embed(open('/Users/fring1117/Desktop/openhing/resources/charts/youth_employment_trends.html').read(), width=600, height=400)
+    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "youth_employment_trends.html")
+    if os.path.exists(chart_path):
+        st.components.v1(open(chart_path).read(), height=400)
+    else:
+        st.info("Chart not found")
 
 with col3:
-    st.html_embed(open('/Users/fring1117/Desktop/openhing/resources/charts/direction_energy.html').read(), width=600, height=400)
+    chart_path = os.path.join(os.path.dirname(__file__), "resources", "charts", "direction_energy.html")
+    if os.path.exists(chart_path):
+        st.components.v1(open(chart_path).read(), height=400)
+    else:
+        st.info("Chart not found")
 
 # 底部
 st.divider()
@@ -92,7 +87,7 @@ def run_crewai(topic, depth):
     """調用 CrewAI API 生成報告"""
     
     # 使用簡化版腳本（可靠）
-    script_path = "/Users/fring1117/Desktop/openhing/scripts/research_agent_simple.py"
+    script_path = os.path.join(os.path.dirname(__file__), "scripts", "research_agent_simple.py")
     
     # 修改腳本中的 topic
     with open(script_path, 'r', encoding='utf-8') as f:
@@ -116,7 +111,7 @@ def run_crewai(topic, depth):
     # 執行
     try:
         result = subprocess.run(
-            ['python3.11', temp_script],
+            ['python3', temp_script],
             capture_output=True,
             text=True,
             timeout=120
