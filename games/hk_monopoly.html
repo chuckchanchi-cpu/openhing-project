@@ -508,6 +508,7 @@
     let currentPlayerIndex = 0;
     let inJailTurn = 0;
     let diceDoublesCount = 0;
+    let waitingModal = false; // 🐛 FIX: 買地 modal 開住時暫停回合輪轉
     let isRolling = false;
     let canRoll = false;
     let gameOver = false;
@@ -660,6 +661,7 @@
             movePlayerAndAction(d1,d2);
         }
         isRolling = false;
+        if(waitingModal) return; // 🐛 FIX: 等玩家答完買地 modal 先繼續
         // 雙數？
         if(d1===d2){
             diceDoublesCount++;
@@ -808,6 +810,7 @@
     }
 
     function showBuyModal(idx) {
+        waitingModal = true; // 🐛 FIX: modal 開住，暫停回合輪轉
         const p = players[currentPlayerIndex];
         const cell = boardDef[idx];
         const root = document.getElementById('modalRoot');
@@ -823,11 +826,13 @@
         document.getElementById('buyYesBtn').onclick = ()=>{
             executePurchase(currentPlayerIndex, idx);
             root.innerHTML='';
+            waitingModal = false; // 🐛 FIX: 答完，解除暫停
             disableOrNext();
         };
         document.getElementById('buyNoBtn').onclick = ()=>{
             addLog(`${p.name} 放棄購買 ${cell.name}`);
             root.innerHTML='';
+            waitingModal = false; // 🐛 FIX: 答完，解除暫停
             disableOrNext();
         };
     }
@@ -1009,6 +1014,7 @@
     // next turn
     function nextTurn(){
         if(gameOver) return;
+        if(waitingModal) return; // 🐛 FIX: 買地 modal 未答，唔好輪到下一個玩家
         const p = players[currentPlayerIndex];
         // 若AI破產
         do {
