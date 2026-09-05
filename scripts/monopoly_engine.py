@@ -50,6 +50,7 @@ class Player:
     properties: list = field(default_factory=list)
     in_jail: bool = False
     jail_turns: int = 0
+    bankrupt: bool = False
     
     def can_afford(self, price: int) -> bool:
         return self.money >= price
@@ -65,6 +66,12 @@ class Player:
     
     def is_broke(self) -> bool:
         return self.money <= 0
+    
+    def total_assets(self) -> int:
+        assets = self.money
+        for prop in self.properties:
+            assets += prop.price + (prop.level * prop.price // 2)
+        return assets
 
 
 class Board:
@@ -282,12 +289,10 @@ class MonopolyGame:
         return False
     
     def ai_turn(self, player: Player):
-        """AI 回合"""
-        print(f"\n{'='*50}")
-        print(f"🤖 {player.name} 嘅回合")
-        print(f"💰 資金: ${player.money}")
-        print(f"🏠 物業: {len(player.properties)} 個")
-        print(f"{'='*50}")
+        """AI 回合 (增強版)"""
+        print(f"\n{'='*55}")
+        print(f"🤖 {player.name} | 💰${player.money} | 🏠{len(player.properties)}")
+        print(f"{'='*55}")
         
         if player.in_jail:
             player.jail_turns -= 1
@@ -364,8 +369,8 @@ class MonopolyGame:
             print(status)
     
     def run_game(self, rounds: int = 30):
-        """運行遊戲"""
-        print("🎲 AI MONOPOLY 開始!")
+        """運行遊戲 (增強版)"""
+        print("🎲 AI MONOPOLY v2.0")
         print(f"👥 玩家數量: {len(self.players)}")
         print(f"🎯 目標: 進行 {rounds} 回合\n")
         
@@ -378,11 +383,11 @@ class MonopolyGame:
                 if self.game_over:
                     break
                 
-                if player.is_broke():
+                if player.is_broke() or player.bankrupt:
                     print(f"  💔 {player.name} 破產淘汰!")
                     continue
                 
-                if player.player_id == 0:
+                if player.player_id == 0 and not self.test_mode:
                     self.human_turn(player)
                 else:
                     self.ai_turn(player)
@@ -391,8 +396,10 @@ class MonopolyGame:
         
         # 遊戲結束
         print(f"\n🏆 遊戲結束!")
-        winner = max(self.players, key=lambda p: p.money)
-        print(f"🎉 勝利者: {winner.name} (${winner.money})")
+        survivors = [p for p in self.players if not p.bankrupt]
+        if survivors:
+            winner = max(survivors, key=lambda p: p.total_assets())
+            print(f"🎉 勝利者: {winner.name} (總資產: ${winner.total_assets()})")
         self.board.print_board()
 
 
