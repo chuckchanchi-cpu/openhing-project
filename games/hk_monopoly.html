@@ -303,8 +303,10 @@
             justify-content: center;
             z-index: 999;
             backdrop-filter: blur(4px);
+            pointer-events: auto; /* 🐛 FIX: modalRoot 有 pointer-events:none 會繼承，令 modal 按鈕撳唔到 */
         }
         .modal-box {
+            pointer-events: auto; /* 🐛 FIX 保險 */
             background: #fcf5e5;
             padding: 30px;
             border-radius: 40px;
