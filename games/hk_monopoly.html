@@ -690,6 +690,9 @@
             if(canUpgrade(currentPlayerIndex)) upgradeBtn.style.display='inline-block';
             else upgradeBtn.style.display='none';
             rollMsg.textContent = '輪到你，撳🎲擲骰。';
+            // 🐛 FIX: 重新啟用擲骰按鈕（之前喺 rollDice 開頭被 disabled）
+            rollBtn.disabled = false;
+            canRoll = true;
         } else {
             rollMsg.textContent = '';
         }
@@ -882,6 +885,8 @@
             p.money -= rent;
             if(p.money<0) handleBankruptcy(currentPlayerIndex);
         }
+        // 🐛 FIX: 交租後繼續回合流程（之前會卡死）
+        if(!gameOver && !players[currentPlayerIndex].bankrupt) disableOrNext();
     }
 
     function isFullGroup(pi, group){
@@ -984,6 +989,9 @@
             if(!gameOver && checkAllButOneBankrupt()){
                 gameOver = true;
                 showEndScreen(winnerName());
+            } else if(!gameOver){
+                // 🐛 FIX: 破產清算後繼續下一個玩家回合
+                setTimeout(()=>nextTurn(), 600);
             }
         }
     }
