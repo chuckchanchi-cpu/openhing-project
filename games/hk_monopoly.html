@@ -683,40 +683,14 @@
     }
 
     function disableOrNext(){
-        if(gameOver) return;
-        const p = players[currentPlayerIndex];
-        if(p.isHuman && !p.bankrupt){
-            // 如果出獄/租務發生後可以升級
-            if(canUpgrade(currentPlayerIndex)) upgradeBtn.style.display='inline-block';
-            else upgradeBtn.style.display='none';
-            rollMsg.textContent = '輪到你，撳🎲擲骰。';
-            // 🐛 FIX: 重新啟用擲骰按鈕（之前喺 rollDice 開頭被 disabled）
-            rollBtn.disabled = false;
-            canRoll = true;
-        } else {
-            rollMsg.textContent = '';
-        }
-        upgradeBtn.onclick = ()=>openUpgradeModal();
-        rollMsg.textContent = rollMsg.textContent || '可以擲骰';
-        if(!p.isHuman){
-            // AI自動擲骰
-            canRoll = true;
-            setTimeout(()=>rollDice(), 900);
-        }
+        // 🐛 FIX: 回合結束 → 輪到下一個玩家（之前錯咗：令同一玩家無限再擲，AI 永遠唔會輪到）
+        nextTurn();
     }
 
     function enableNextAfterRoll(){
-        if(gameOver) return;
-        const p = players[currentPlayerIndex];
-        if(p.isHuman){
-            rollBtn.disabled = false;
-            canRoll = true;
-            if(canUpgrade(currentPlayerIndex)) upgradeBtn.style.display='inline-block';
-            rollMsg.textContent = '可以再擲';
-        } else {
-            canRoll = true;
-            setTimeout(()=>rollDice(), 900);
-        }
+        // 🐛 FIX: 坐監擲骰唔中雙數 = 呢個回合結束，輪到下一個玩家
+        // （jailTurns 已經喺 rollDice 遞增，下次輪到再試出獄）
+        nextTurn();
     }
 
     function enableRoll(){ rollBtn.disabled = false; canRoll = true; if(players[currentPlayerIndex].isHuman) rollBtn.disabled = false; }
