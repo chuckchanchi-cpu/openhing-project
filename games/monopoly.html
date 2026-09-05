@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 AI Monopoly v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 2em; }
+        .game-container { max-width: 800px; width: 100%; background: #16213e; border-radius: 15px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .player-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .player-card { background: #0f3460; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid transparent; transition: all 0.3s; }
+        .player-card.active { border-color: #e94560; transform: scale(1.05); box-shadow: 0 0 20px rgba(233,69,96,0.5); }
+        .player-name { font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+        .player-money { color: #4cd137; font-size: 1.2em; }
+        .player-properties { color: #aaa; font-size: 0.8em; }
+        .game-log { background: #0a0a0a; border-radius: 10px; padding: 15px; height: 300px; overflow-y: auto; margin-bottom: 20px; font-size: 0.9em; line-height: 1.6; }
+        .log-entry { margin-bottom: 8px; padding: 5px; border-radius: 5px; }
+        .log-entry.action { background: rgba(46,204,113,0.1); }
+        .log-entry.warning { background: rgba(230,126,34,0.1); }
+        .log-entry.success { background: rgba(46,204,113,0.15); }
+        .log-entry.error { background: rgba(231,76,60,0.15); }
+        .log-entry.info { background: rgba(52,152,219,0.1); }
+        .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        button { padding: 15px 30px; border: none; border-radius: 10px; font-size: 1.1em; cursor: pointer; transition: all 0.3s; font-weight: bold; }
+        .btn-roll { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-roll:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102,122,234,0.4); }
+        .btn-roll:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-buy { background: linear-gradient(135deg, #4cd137 0%, #44bd62 100%); color: white; }
+        .btn-sell { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #16213e; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; width: 90%; }
+        .property-info { font-size: 1.3em; margin: 15px 0; color: #fff; }
+        .property-price { font-size: 1.8em; color: #4cd137; margin: 10px 0; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 12px 20px; }
+    </style>
+</head>
+<body>
+    <h1>🎲 AI MONOPOLY v2.0</h1>
+    <div class="game-container">
+        <div class="player-status" id="playerStatus"></div>
+        <div class="game-log" id="gameLog"></div>
+        <div class="controls">
+            <button class="btn-roll" id="rollBtn" onclick="rollDice()">🎲 骰子</button>
+        </div>
+    </div>
+    <div class="modal" id="purchaseModal">
+        <div class="modal-content">
+            <div class="property-info" id="propName"></div>
+            <div class="property-price" id="propPrice"></div>
+            <div style="color: #aaa; margin: 10px 0;" id="propOwner"></div>
+            <div class="modal-buttons">
+                <button class="btn-buy" onclick="confirmPurchase()">✅ 購買</button>
+                <button class="btn-sell" onclick="closeModal()">❌ 放棄</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const properties = [
+            {name:"GO",price:0,rent:0},{name:"中環",price:60,rent:10,group:"blue"},{name:"機會",price:0,rent:0,type:"chance"},
+            {name:"尖沙咀",price:60,rent:10,group:"blue"},{name:"九龍城",price:60,rent:10,group:"blue"},
+            {name:"利稅",price:200,rent:0,type:"tax"},{name:"旺角",price:100,rent:15,group:"light_blue"},
+            {name:"港鐵公司",price:200,rent:25,type:"railroad"},{name:"觀塘",price:100,rent:15,group:"light_blue"},
+            {name:"荃灣",price:100,rent:15,group:"light_blue"},{name:"監獄",price:0,rent:0,type:"jail"},
+            {name:"屯門",price:140,rent:20,group:"pink"},{name:"電力公司",price:150,rent:30,type:"utility"},
+            {name:"沙田",price:140,rent:20,group:"pink"},{name:"馬鞍山",price:160,rent:25,group:"pink"},
+            {name:"命運",price:0,rent:0,type:"community"},{name:"紅磡",price:180,rent:25,group:"orange"},
+            {name:"港島線",price:200,rent:30,type:"railroad"},{name:"何文田",price:180,rent:25,group:"orange"},
+            {name:"油麻地",price:180,rent:25,group:"orange"},{name:"自由停車場",price:0,rent:0,type:"parking"},
+            {name:"銅鑼灣",price:220,rent:35,group:"red"},{name:"機會",price:0,rent:0,type:"chance"},
+            {name:"灣仔",price:220,rent:35,group:"red"},{name:"金鐘",price:240,rent:40,group:"red"},
+            {name:"遺產稅",price:100,rent:0,type:"tax"},{name:"中環 CBD",price:260,rent:50,group:"yellow"},
+            {name:"東鐵線",price:200,rent:30,type:"railroad"},{name:"上環",price:260,rent:50,group:"yellow"},
+            {name:"西營盤",price:280,rent:55,group:"yellow"},{name:"入獄",price:0,rent:0,type:"go_to_jail"},
+            {name:"淺水灣",price:300,rent:60,group:"green"},{name:"命運",price:0,rent:0,type:"community"},
+            {name:"南丫島",price:300,rent:60,group:"green"},{name:"迪士尼樂園",price:350,rent:70,group:"green"},
+            {name:"機場快線",price:200,rent:30,type:"railroad"},{name:"長洲",price:320,rent:65,group:"dark_green"},
+            {name:"機會",price:0,rent:0,type:"chance"},{name:"太平山",price:400,rent:100,group:"dark_blue"},
+            {name:"地皮王",price:0,rent:0}
+        ];
+        let players = [
+            {name:"你 (人類)",money:1500,position:0,properties:[],inJail:false,bankrupt:false},
+            {name:"AI 巴菲特",money:1500,position:0,properties:[],inJail:false,bankrupt:false},
+            {name:"AI 索羅斯",money:1500,position:0,properties:[],inJail:false,bankrupt:false},
+            {name:"AI 達沃斯",money:1500,position:0,properties:[],inJail:false,bankrupt:false}
+        ];
+        let currentPlayer = 0, gameActive = true, pendingProperty = null;
+        
+        function init() { updatePlayerStatus(); addLog("🎮 遊戲開始！4名玩家，每人 $1500", "info"); }
+        
+        function updatePlayerStatus() {
+            const c = document.getElementById('playerStatus'); c.innerHTML = '';
+            players.forEach((p,i) => {
+                const d = document.createElement('div');
+                d.className = `player-card ${i===currentPlayer?'active':''}`;
+                d.innerHTML = `<div class="player-name">${p.name}</div><div class="player-money">$${p.money}</div><div class="player-properties">🏠${p.properties.length}個</div>`;
+                c.appendChild(d);
+            });
+        }
+        
+        function addLog(msg, type='action') {
+            const l = document.getElementById('gameLog');
+            const e = document.createElement('div'); e.className = `log-entry ${type}`; e.textContent = msg;
+            l.appendChild(e); l.scrollTop = l.scrollHeight;
+        }
+        
+        function rollDice() {
+            if(!gameActive || currentPlayer!==0) return;
+            const btn = document.getElementById('rollBtn'); btn.disabled = true;
+            const d1=Math.floor(Math.random()*6)+1, d2=Math.floor(Math.random()*6)+1, total=d1+d2;
+            addLog(`🎲 你出 ${d1}+${d2}=${total}`, 'action');
+            setTimeout(()=>{ movePlayer(0, total); btn.disabled=false; }, 500);
+        }
+        
+        function movePlayer(idx, steps) {
+            const p = players[idx];
+            const oldPos = p.position;
+            p.position = (p.position + steps) % 40;
+            if(p.position < oldPos && p.position !== 0) { p.money += 200; addLog("🎉 經過 GO! +$200", "success"); }
+            handleLanding(p); nextTurn();
+        }
+        
+        function handleLanding(player) {
+            const prop = properties[player.position];
+            addLog(`📍 ${player.name} → ${prop.name}`, 'info');
+            switch(prop.type) {
+                case 'chance': drawCard(player, '機會'); break;
+                case 'community': drawCard(player, '命運'); break;
+                case 'tax': 
+                    const fine = prop.name==='利稅'?100:200;
+                    if(player.pay(fine)) addLog(`💸 繳稅 -$ ${fine}`, 'warning');
+                    break;
+                case 'go_to_jail': player.position=10; player.inJail=true; addLog("🔒 直接入獄!", "error"); break;
+                case 'parking': addLog("🅿️ 自由停車場", "info"); break;
+                case 'jail': addLog("😌 只是訪問監獄", "info"); break;
+                default:
+                    if(prop.price > 0) {
+                        const owner = getOwner(player.position);
+                        if(owner === -1) showPurchaseModal(player, prop);
+                        else if(owner !== player.id) payRent(player, prop, owner);
+                    }
+                    break;
+            }
+        }
+        
+        function getOwner(pos) {
+            for(let i=0;i<players.length;i++) {
+                const owned = players[i].properties.map(p=>properties[p]);
+                if(owned.some(p=>p.name===properties[pos].name)) return i;
+            }
+            return -1;
+        }
+        
+        function drawCard(player, type) {
+            const cards = [["前進 GO! +$200",p=>p.money+=200],["銀行退還 $50",p=>p.money+=50],["股票賺取 $100",p=>p.money+=100],["醫藥費 $50",p=>p.money-=50],["罰款 $75",p=>p.money-=75],["繼承遺產 $150",p=>p.money+=150]];
+            const card = cards[Math.floor(Math.random()*cards.length)];
+            card[1](player); addLog(`🃏 [${type}] ${card[0]}`, 'info');
+        }
+        
+        function showPurchaseModal(player, prop) {
+            pendingProperty = { player, prop };
+            document.getElementById('propName').textContent = `📦 購買 ${prop.name}`;
+            document.getElementById('propPrice').textContent = `價格 $${prop.price}`;
+            document.getElementById('propOwner').textContent = `你的現金: $${player.money}`;
+            document.getElementById('purchaseModal').style.display = 'flex';
+        }
+        
+        function confirmPurchase() {
+            if(!pendingProperty) return;
+            const {player, prop} = pendingProperty;
+            if(player.pay(prop.price)) {
+                prop.owner = players.indexOf(player);
+                player.properties.push(properties.indexOf(prop));
+                addLog(`✅ 購買成功!`, 'success');
+            }
+            closeModal();
+        }
+        
+        function closeModal() { document.getElementById('purchaseModal').style.display = 'none'; pendingProperty = null; }
+        
+        function payRent(player, prop, ownerIdx) {
+            const owner = players[ownerIdx];
+            const rent = prop.rent * (prop.level||1);
+            addLog(`💰 租金: $ ${rent} (${owner.name})`, 'warning');
+            if(player.pay(rent)) { owner.money += rent; addLog("✅ 支付成功", 'success'); }
+            else { addLog(`💔 破產了! ${player.name} 被淘汰!`, 'error'); player.bankrupt = true; gameActive = false; }
+        }
+        
+        function aiTurn() {
+            const player = players[currentPlayer];
+            addLog(`🤖 ${player.name} 思考中...`, 'info');
+            setTimeout(() => {
+                const d1=Math.floor(Math.random()*6)+1, d2=Math.floor(Math.random()*6)+1, total=d1+d2;
+                addLog(`🎲 ${player.name} 擲出 ${d1}+${d2}=${total}`, 'action');
+                movePlayer(currentPlayer, total);
+            }, 1000);
+        }
+        
+        function nextTurn() {
+            currentPlayer = (currentPlayer + 1) % 4;
+            updatePlayerStatus();
+            if(currentPlayer !== 0 && gameActive) aiTurn();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
