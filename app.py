@@ -97,29 +97,34 @@ def load_plotly_figure(html_path):
 
 
 if has_charts:
-    col1, col2, col3 = st.columns(3)
-
     charts = [
-        ("population_pyramid.html", "人口金字塔"),
-        ("youth_employment_trends.html", "就業趨勢"),
-        ("direction_energy.html", "能量分析")
+        ("population_pyramid.html", "人口金字塔", "👥"),
+        ("youth_employment_trends.html", "就業趨勢", "💼"),
+        ("direction_energy.html", "能量分析", "⚡")
     ]
-
-    for i, (chart_file, title) in enumerate(charts):
+    
+    cols = st.columns(3)
+    for i, (chart_file, title, icon) in enumerate(charts):
         chart_path = os.path.join(chart_dir, chart_file)
-        with [col1, col2, col3][i]:
+        with cols[i]:
             if os.path.exists(chart_path):
-                try:
-                    fig_data = load_plotly_figure(chart_path)
-                    if fig_data:
-                        import plotly.graph_objects as go
-                        data, layout = fig_data
-                        fig = go.Figure(data=data, layout=layout)
-                        st.plotly_chart(fig, use_container_width=True, key=f"chart_{chart_file}")
-                    else:
-                        st.info(f"{title}: 無法提取圖表數據")
-                except Exception as e:
-                    st.error(f"Error loading {title}: {str(e)}")
+                # 大圖標按鈕
+                st.markdown(f"<div style='text-align:center;font-size:3em;padding:20px;'>{icon}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:center;font-weight:bold;'>{title}</div>", unsafe_allow_html=True)
+                
+                # 點擊展開詳細圖表
+                if st.button(f"🔍 查看 {title}", key=f"btn_{chart_file}", use_container_width=True):
+                    try:
+                        fig_data = load_plotly_figure(chart_path)
+                        if fig_data:
+                            import plotly.graph_objects as go
+                            data, layout = fig_data
+                            fig = go.Figure(data=data, layout=layout)
+                            st.plotly_chart(fig, use_container_width=True, key=f"detail_{chart_file}")
+                        else:
+                            st.info(f"無法提取圖表數據")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
             else:
                 st.info(f"{title} chart not found")
 else:
