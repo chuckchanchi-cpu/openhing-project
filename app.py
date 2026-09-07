@@ -158,8 +158,12 @@ def run_crewai(topic, depth):
             ['python3', temp_script],
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=180  # 增加超時至 3 分鐘
         )
+        
+        if result.returncode != 0:
+            error_msg = result.stderr or result.stdout
+            return f"❌ 腳本執行失敗\n\n錯誤信息：{error_msg[:500]}"
         
         # 提取報告部分（去掉警告信息）
         output = result.stdout
@@ -167,7 +171,7 @@ def run_crewai(topic, depth):
             if '✅ 分析完成!' in line or '### 1.' in line:
                 return '\n'.join(output.split(line)[-1:])
         
-        return output
+        return output if output.strip() else "❌ API 返回空結果，請稍後再試。"
     
     except Exception as e:
         return f"❌ 錯誤: {str(e)}\n\n請檢查 API 配置是否正確。"

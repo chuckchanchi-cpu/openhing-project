@@ -29,8 +29,21 @@
         .btn-roll:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-buy { background: linear-gradient(135deg, #4cd137 0%, #44bd62 100%); color: white; }
         .btn-sell { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #16213e; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; width: 90%; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; cursor: pointer; }
+        .modal-content { background: #16213e; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; width: 90%; cursor: default; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .buy-prompt {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+            text-align: center;
+        }
+        .buy-prompt button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 1em;
+        }
         .property-info { font-size: 1.3em; margin: 15px 0; color: #fff; }
         .property-price { font-size: 1.8em; color: #4cd137; margin: 10px 0; }
         .modal-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
@@ -41,20 +54,17 @@
     <h1>🎲 AI MONOPOLY v2.0</h1>
     <div class="game-container">
         <div class="player-status" id="playerStatus"></div>
+        <div class="buy-prompt" id="buyPrompt">
+            <div id="buyPropName" style="font-size:1.2em;margin-bottom:10px;"></div>
+            <div id="buyPropPrice" style="color:#4cd137;font-size:1.5em;margin-bottom:10px;"></div>
+            <div>
+                <button class="btn-buy" onclick="doBuy()">✅ 購買</button>
+                <button class="btn-sell" onclick="doSkip()">❌ 放棄</button>
+            </div>
+        </div>
         <div class="game-log" id="gameLog"></div>
         <div class="controls">
             <button class="btn-roll" id="rollBtn" onclick="rollDice()">🎲 骰子</button>
-        </div>
-    </div>
-    <div class="modal" id="purchaseModal">
-        <div class="modal-content">
-            <div class="property-info" id="propName"></div>
-            <div class="property-price" id="propPrice"></div>
-            <div style="color: #aaa; margin: 10px 0;" id="propOwner"></div>
-            <div class="modal-buttons">
-                <button class="btn-buy" onclick="confirmPurchase()">✅ 購買</button>
-                <button class="btn-sell" onclick="closeModal()">❌ 放棄</button>
-            </div>
         </div>
     </div>
     <script>
@@ -138,8 +148,17 @@
                 default:
                     if(prop.price > 0) {
                         const owner = getOwner(player.position);
-                        if(owner === -1) showPurchaseModal(player, prop);
-                        else if(owner !== player.id) payRent(player, prop, owner);
+                        if(owner === -1) {
+                            // 顯示購買提示 (唔遮擋)
+                            document.getElementById('buyPropName').textContent = prop.name;
+                            document.getElementById('buyPropPrice').textContent = `價格 $${prop.price}`;
+                            document.getElementById('buyPrompt').style.display = 'block';
+                            pendingProperty = { player, prop };
+                            // 禁用骰子按鈕
+                            document.getElementById('rollBtn').disabled = true;
+                        } else if(owner !== players.indexOf(player)) {
+                            payRent(player, prop, owner);
+                        }
                     }
                     break;
             }
@@ -159,15 +178,11 @@
             card[1](player); addLog(`🃏 [${type}] ${card[0]}`, 'info');
         }
         
-        function showPurchaseModal(player, prop) {
-            pendingProperty = { player, prop };
-            document.getElementById('propName').textContent = `📦 購買 ${prop.name}`;
-            document.getElementById('propPrice').textContent = `價格 $${prop.price}`;
-            document.getElementById('propOwner').textContent = `你的現金: $${player.money}`;
-            document.getElementById('purchaseModal').style.display = 'flex';
-        }
+        function showPurchaseModal(player, prop) { /* 已改用 inline prompt */ }
         
-        function confirmPurchase() {
+        function confirmPurchase() { /* 已改用 inline prompt */ }
+        
+        function doBuy() {
             if(!pendingProperty) return;
             const {player, prop} = pendingProperty;
             if(player.pay(prop.price)) {
@@ -175,10 +190,19 @@
                 player.properties.push(properties.indexOf(prop));
                 addLog(`✅ 購買成功!`, 'success');
             }
-            closeModal();
+            hideBuyPrompt();
         }
         
-        function closeModal() { document.getElementById('purchaseModal').style.display = 'none'; pendingProperty = null; }
+        function doSkip() {
+            addLog(`❌ 放棄購買`, 'info');
+            hideBuyPrompt();
+        }
+        
+        function hideBuyPrompt() {
+            document.getElementById('buyPrompt').style.display = 'none';
+            pendingProperty = null;
+            document.getElementById('rollBtn').disabled = false;
+        }
         
         function payRent(player, prop, ownerIdx) {
             const owner = players[ownerIdx];

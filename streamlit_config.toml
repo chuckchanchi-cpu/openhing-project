@@ -1,13 +1,15 @@
-[general]
-email = ""
-
 [server]
 headless = true
-enableCORS = false
-enableXsrfProtection = false
-browser.serverAddress = localhost
 port = 8501
+enableXsrfProtection = true
+enableCORS = false
 
-[runner]
-magicEnabled = true
-fastReruns = true
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#16213e"
+backgroundColor = "#1a1a2e"
+secondaryBackgroundColor = "#0f3460"
+textColor = "#ffffff"
+font = "sans serif"
