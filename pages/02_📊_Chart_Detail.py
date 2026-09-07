@@ -27,7 +27,7 @@ st.caption("點擊左側菜單返回主頁")
 
 # 導航回主頁
 st.markdown("""
-[🏠 返回研究助手](https://openhing-project-iyhfozjplwp6qdw3chkesk.streamlit.app)
+🏠 [返回研究助手](/)
 """)
 
 st.divider()
