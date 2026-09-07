@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦀 Openhing — Sep 7 會議簡報</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8;
+    --primary: #38bdf8; --accent: #a78bfa; --green: #34d399; --amber: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'PingFang TC', 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden; height: 100vh;
+  }
+  .slide {
+    display: none; width: 100vw; height: 100vh; padding: 7vh 8vw;
+    flex-direction: column; justify-content: center; position: relative;
+  }
+  .slide.active { display: flex; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .kicker { color: var(--primary); font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+  h1 { font-size: 3rem; line-height: 1.25; margin-bottom: 18px; }
+  h2 { font-size: 2.2rem; margin-bottom: 24px; }
+  h3 { font-size: 1.3rem; margin-bottom: 10px; color: var(--primary); }
+  p, li { font-size: 1.15rem; color: #cbd5e1; line-height: 1.7; }
+  .sub { color: var(--muted); font-size: 1.1rem; margin-top: 14px; }
+  .grid { display: grid; gap: 16px; margin-top: 20px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px;
+  }
+  .card .big { font-size: 2.4rem; font-weight: 700; color: var(--primary); }
+  .card .big.green { color: var(--green); }
+  .card .big.amber { color: var(--amber); }
+  .card .big.purple { color: var(--accent); }
+  .card p { font-size: 0.95rem; color: var(--muted); margin-top: 6px; }
+  .stars { color: var(--amber); letter-spacing: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 1rem; }
+  th { text-align: left; color: var(--primary); padding: 10px 12px; border-bottom: 2px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: #cbd5e1; }
+  .highlight { color: var(--green); font-weight: 700; }
+  .quote {
+    border-left: 4px solid var(--accent); background: rgba(167,139,250,0.08);
+    padding: 18px 22px; border-radius: 0 12px 12px 0; font-size: 1.3rem; margin-top: 20px;
+  }
+  .nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; align-items: center; z-index: 100;
+  }
+  .nav button {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 18px; border-radius: 999px; cursor: pointer; font-size: 0.95rem;
+    transition: all 0.15s;
+  }
+  .nav button:hover { border-color: var(--primary); color: var(--primary); }
+  .nav .counter { color: var(--muted); font-size: 0.85rem; padding: 0 8px; }
+  .badge {
+    display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 0.8rem;
+    background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.3);
+  }
+  .slide-num { position: absolute; top: 24px; right: 32px; color: var(--muted); font-size: 0.8rem; }
+  ul { margin: 12px 0 12px 24px; }
+  li { margin: 8px 0; }
+  .footer-note { position: absolute; bottom: 28px; left: 8vw; color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: 封面 -->
+<div class="slide active">
+  <div class="slide-num">1 / 9</div>
+  <div class="kicker">Openhing 項目 · 2026-09-07</div>
+  <h1>🦀 AI 增強人，<br>而唔係取代人</h1>
+  <p style="font-size:1.3rem">Ethical AI Research Assistant — 多智能體研究系統</p>
+  <p class="sub">回應 Bill Gates 2026-08-27 警告 · MVP 已驗證 · 今日決定框架 + 場景</p>
+</div>
+
+<!-- Slide 2: 一句話總結 -->
+<div class="slide">
+  <div class="slide-num">2 / 9</div>
+  <div class="kicker">我哋做緊咩</div>
+  <h2>輸入主題 → 自動研究 → 完整報告</h2>
+  <div class="grid g3">
+    <div class="card"><div class="big">🔍</div><h3>真實搜索</h3><p>研究員 Agent 上網搵最新資料（68 次搜索/次）</p></div>
+    <div class="card"><div class="big">🧠</div><h3>多角度分析</h3><p>分析師 Agent 交叉驗證、整理數據</p></div>
+    <div class="card"><div class="big">✍️</div><h3>自動撰寫</h3><p>寫手 Agent 出完整報告，粵語/繁中</p></div>
+  </div>
+  <div class="quote">「AI 幫人做得更好，而唔係取代人。」</div>
+</div>
+
+<!-- Slide 3: MVP 成果 -->
+<div class="slide">
+  <div class="slide-num">3 / 9</div>
+  <div class="kicker">我哋做咗啲咩</div>
+  <h2>MVP 三日跑通 ✅</h2>
+  <div class="grid g3">
+    <div class="card"><div class="big green">Day 1-2</div><h3>MVP 1.0</h3><p>CrewAI 3-agent 流水線 · 15.5KB 完整報告</p></div>
+    <div class="card"><div class="big green">Day 3</div><h3>MVP 2.0</h3><p>真實網上搜索 · 68 次搜索 · 權威數據</p></div>
+    <div class="card"><div class="big green">Day 4</div><h3>MVP 2.1</h3><p>Web UI · 自動圖表 · GitHub Pages 永久網址</p></div>
+  </div>
+  <p class="sub">🔗 永久網址：chuckchanchi-cpu.github.io/openhing-project</p>
+</div>
+
+<!-- Slide 4: 關鍵數據 -->
+<div class="slide">
+  <div class="slide-num">4 / 9</div>
+  <div class="kicker">點解而家要做</div>
+  <h2>市場數據話畀我哋知</h2>
+  <table>
+    <tr><th>數據</th><th>來源</th><th>意義</th></tr>
+    <tr><td><span class="highlight">40%</span> 企業應用將內建 Agent</td><td>Gartner</td><td>Agent 普及化</td></tr>
+    <tr><td>2,860萬 → <span class="highlight">22.16億</span>（80倍）</td><td>IDC</td><td>2026-2030 爆發</td></tr>
+    <tr><td><span class="highlight">70%</span> 企業已運行 Agent</td><td>Google Cloud</td><td>已非早期採用</td></tr>
+    <tr><td>Agentic Commerce <span class="highlight">3-5 兆美元</span></td><td>McKinsey</td><td>經濟規模</td></tr>
+    <tr><td>EU AI Act 8/2 生效 · 罰款可達 <span class="highlight">7%</span> 營業額</td><td>歐盟</td><td>合規成為剛需</td></tr>
+  </table>
+  <p class="sub">以上全部來自真實網上搜索（68 次），唔係估出嚟</p>
+</div>
+
+<!-- Slide 5: 框架推薦 -->
+<div class="slide">
+  <div class="slide-num">5 / 9</div>
+  <div class="kicker">技術框架</div>
+  <h2>推薦：CrewAI ⭐⭐⭐⭐⭐</h2>
+  <div class="grid g3">
+    <div class="card"><div class="stars">⭐⭐⭐⭐⭐</div><h3>多智能體協作</h3><p>Role/Goal/Backstory 設計直觀</p></div>
+    <div class="card"><div class="stars">⭐⭐⭐⭐⭐</div><h3>開發速度</h3><p>MVP 兩日內完成</p></div>
+    <div class="card"><div class="stars">⭐⭐⭐⭐</div><h3>工具整合</h3><p>搜索/API 工具即插即用</p></div>
+  </div>
+  <p style="margin-top:18px">備選：<strong>LangGraph</strong> ⭐⭐⭐⭐（更底層，複雜狀態流）<br>
+  ⚠️ 不推薦：<strong>AutoGen</strong>（維護模式，Microsoft 已轉向 Agent Framework）</p>
+</div>
+
+<!-- Slide 6: 應用場景 -->
+<div class="slide">
+  <div class="slide-num">6 / 9</div>
+  <div class="kicker">應用場景</div>
+  <h2>建議路線圖</h2>
+  <div class="grid g3">
+    <div class="card"><div class="big green">短期</div><h3>📄 文書/研究自動化</h3><p>輸入主題 → 自動研究報告<br><span class="badge">已有 Demo</span></p></div>
+    <div class="card"><div class="big amber">中期</div><h3>💬 智能客服</h3><p>RAG + 公司知識庫<br>即問即答</p></div>
+    <div class="card"><div class="big purple">長期</div><h3>🧠 決策支援</h3><p>多 Agent 模擬觀點<br>輔助決策</p></div>
+  </div>
+  <p class="sub">POC 建議：文書自動化 — 見效最快、風險最低、已有完整 demo</p>
+</div>
+
+<!-- Slide 7: 道德設計 -->
+<div class="slide">
+  <div class="slide-num">7 / 9</div>
+  <div class="kicker">我哋嘅差異化</div>
+  <h2>道德設計 = 賣點</h2>
+  <div class="grid g2">
+    <div class="card"><h3>🤝 以人為本</h3><p>Agent 係增強工具，唔係取代者</p></div>
+    <div class="card"><h3>🔍 透明</h3><p>每個輸出可追溯資料來源</p></div>
+    <div class="card"><h3>🔒 私隱</h3><p>數據最小化 + 用戶控制</p></div>
+    <div class="card"><h3>⚖️ 問責</h3><p>人類保留最終決定權</p></div>
+  </div>
+  <div class="quote">市面上大部分產品主打「自動化取代人」— 我哋主打「AI 增強人」</div>
+</div>
+
+<!-- Slide 8: 今日要決定 -->
+<div class="slide">
+  <div class="slide-num">8 / 9</div>
+  <div class="kicker">今日會議</div>
+  <h2>要決定嘅 3 件事</h2>
+  <div class="grid g3">
+    <div class="card"><div class="big">1</div><h3>框架確認</h3><p>CrewAI 作為主力框架？</p></div>
+    <div class="card"><div class="big">2</div><h3>POC 場景</h3><p>文書自動化定係其他？</p></div>
+    <div class="card"><div class="big">3</div><h3>資源投入</h3><p>人手 / 預算 / 時間線</p></div>
+  </div>
+  <div class="quote">今日係攞 commitment 嘅場合，唔係進度報告會。</div>
+</div>
+
+<!-- Slide 9: 下一步 -->
+<div class="slide">
+  <div class="slide-num">9 / 9</div>
+  <div class="kicker">下一步</div>
+  <h2>即場 Demo</h2>
+  <ul>
+    <li>Web UI 輸入主題 → <strong>5-10 分鐘</strong>出完整報告連圖表</li>
+    <li>後備主題已準備（教育 / 企業採用 / 技能發展）</li>
+    <li>斷網都有 GitHub Pages 靜態材料頂住</li>
+  </ul>
+  <p style="margin-top:24px">🦀🦞 多謝！有問題隨時問我哋兩個。</p>
+</div>
+
+<div class="nav">
+  <button onclick="move(-1)">← 上一頁</button>
+  <span class="counter" id="counter">1 / 9</span>
+  <button onclick="move(1)">下一頁 →</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  function move(dir) {
+    slides[current].classList.remove('active');
+    current = (current + dir + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + slides.length;
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') move(1);
+    if (e.key === 'ArrowLeft') move(-1);
+  });
+</script>
+</body>
+</html>
