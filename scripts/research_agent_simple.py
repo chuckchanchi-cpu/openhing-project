@@ -9,12 +9,13 @@
 
 import requests
 import json
+import os
 from datetime import datetime
 
-# API 配置
-API_BASE = "https://api.silra.cn/v1"
-API_KEY = "sk-2YmYfA9Rlar5aIzcjpf56T101fKaSFUkLaceH2zPW7TPCSB7"
-MODEL = "qwen-plus"  # 改用免費/便宜嘅模型
+# API 配置 — 環境變數優先（Streamlit Cloud Secrets 注入），本地 fallback
+API_BASE = os.getenv("OPENAI_API_BASE", "https://api.silra.cn/v1")
+API_KEY = os.getenv("OPENAI_API_KEY", "sk-2YmYfA9Rlar5aIzcjpf56T101fKaSFUkLaceH2zPW7TPCSB7")
+MODEL = os.getenv("OPENAI_MODEL_NAME", "qwen-plus")
 
 def call_llm(prompt):
     """調用 LLM API"""

@@ -13,7 +13,14 @@
 import streamlit as st
 import subprocess
 import os
+import sys
 from datetime import datetime
+
+# 將 Streamlit Secrets 注入環境變數（令 subprocess 繼承）
+# 本地開發時 secrets 唔存在，會用 .env / 預設值
+if hasattr(st, "secrets") and len(st.secrets) > 0:
+    for k, v in st.secrets.items():
+        os.environ[k] = str(v)
 
 # 配置
 st.set_page_config(
@@ -155,7 +162,7 @@ def run_crewai(topic, depth):
     # 執行
     try:
         result = subprocess.run(
-            ['python3', temp_script],
+            [sys.executable, temp_script],
             capture_output=True,
             text=True,
             timeout=180  # 增加超時至 3 分鐘
