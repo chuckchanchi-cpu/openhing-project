@@ -32,8 +32,10 @@ st.markdown("""
 
 st.divider()
 
-# 圖表目錄
-chart_dir = os.path.join(os.path.dirname(__file__), "resources", "charts")
+# 圖表目錄 (使用絕對路徑)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)  # pages/ -> project root
+chart_dir = os.path.join(PROJECT_DIR, "resources", "charts")
 
 # 圖表列表
 charts = [

@@ -62,8 +62,9 @@ if 'report' in st.session_state:
 st.divider()
 st.subheader("📊 數據視覺化")
 
-# 檢查 chart files 是否存在
-chart_dir = os.path.join(os.path.dirname(__file__), "resources", "charts")
+# 檢查 chart files 是否存在 (使用絕對路徑)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+chart_dir = os.path.join(BASE_DIR, "resources", "charts")
 has_charts = os.path.exists(chart_dir)
 
 
