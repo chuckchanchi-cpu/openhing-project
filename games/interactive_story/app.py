@@ -74,36 +74,28 @@ SCENE_EMOJIS = {
     "flying": "🎉"
 }
 
-# TTS Configuration - using Edge TTS (free, no API key needed)
-def get_tts_audio(text):
-    """Generate TTS audio using Edge TTS (Microsoft edge-free-tts)"""
+# TTS Configuration - edge-tts primary (Microsoft neural voices, free, no API key)
+def get_tts_audio_edge(text):
+    """Generate TTS audio using edge-tts (Microsoft neural voices, natural Cantonese)"""
     try:
-        import urllib.request
-        import urllib.parse
-        
-        # Use edge-tts via a simple HTTP approach
-        # Microsoft Edge TTS endpoint (free, no auth required)
-        voice = "zh-CN-XiaoyiNeural"  # Chinese female voice
-        lang = "zh-CN"
-        
-        # Build SSML
-        ssml = f'''
-        <speak version="1.0" xml:lang="{lang}">
-            <voice name="{voice}">
-                {text}
-            </voice>
-        </speak>
-        '''
-        
-        # Call Azure Speech Service free tier or use alternative
-        # Fallback: use gTTS (Google TTS)
-        return None  # Will use gTTS below
+        import asyncio
+        import edge_tts
+
+        async def _generate():
+            communicate = edge_tts.Communicate(text, "zh-HK-HiuGaaiNeural", rate="-10%")
+            audio = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio += chunk["data"]
+            return audio
+
+        return asyncio.run(_generate())
     except Exception as e:
-        st.error(f"TTS Error: {str(e)}")
+        st.warning(f"edge-tts 失敗: {str(e)}")
         return None
 
 def get_tts_audio_gttss(text):
-    """Generate TTS audio using gTTS (Google Text-to-Speech)"""
+    """Fallback: gTTS (Google Text-to-Speech, Cantonese yue)"""
     try:
         from gtts import gTTS
         tts = gTTS(text=text, lang='yue', slow=False)
@@ -119,9 +111,11 @@ def get_tts_audio_gttss(text):
         return None
 
 def play_tts(page_text):
-    """Play TTS audio for current page"""
+    """Play TTS audio for current page (edge-tts primary, gTTS fallback)"""
     with st.spinner("🔊 Generating speech..."):
-        audio_data = get_tts_audio_gttss(page_text)
+        audio_data = get_tts_audio_edge(page_text)
+        if audio_data is None:
+            audio_data = get_tts_audio_gttss(page_text)
     if audio_data:
         st.audio(audio_data, format="audio/mpeg")
         st.success("🎧 Audio ready!")
