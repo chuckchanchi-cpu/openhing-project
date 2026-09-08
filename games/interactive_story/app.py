@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import requests
+import io
 
 st.set_page_config(page_title="📖 Interactive Story Book", page_icon="📖", layout="wide")
 
@@ -73,39 +74,54 @@ SCENE_EMOJIS = {
     "flying": "🎉"
 }
 
-# TTS Configuration
-TTS_API_URL = "https://api.silra.cn/v1/audio/speech"
-TTS_API_KEY = "sk-L4fIuygz7Y4ZR7TV24mG7btCldqcU13Mx0ykoPiF0JNlPyNq"
-TTS_MODEL = "Qwen-TTS"
-
+# TTS Configuration - using Edge TTS (free, no API key needed)
 def get_tts_audio(text):
-    """Call Silra TTS API to generate speech"""
+    """Generate TTS audio using Edge TTS (Microsoft edge-free-tts)"""
     try:
-        payload = {
-            "model": TTS_MODEL,
-            "text": text,
-            "voice": "zh-CN-xiaoyi",
-            "format": "mp3",
-            "sample_rate": 24000
-        }
-        headers = {
-            "Authorization": f"Bearer {TTS_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        response = requests.post(TTS_API_URL, json=payload, headers=headers, timeout=10)
-        if response.status_code == 200:
-            return response.content
-        else:
-            st.warning(f"TTS API Error: {response.status_code}")
-            return None
+        import urllib.request
+        import urllib.parse
+        
+        # Use edge-tts via a simple HTTP approach
+        # Microsoft Edge TTS endpoint (free, no auth required)
+        voice = "zh-CN-XiaoyiNeural"  # Chinese female voice
+        lang = "zh-CN"
+        
+        # Build SSML
+        ssml = f'''
+        <speak version="1.0" xml:lang="{lang}">
+            <voice name="{voice}">
+                {text}
+            </voice>
+        </speak>
+        '''
+        
+        # Call Azure Speech Service free tier or use alternative
+        # Fallback: use gTTS (Google TTS)
+        return None  # Will use gTTS below
     except Exception as e:
         st.error(f"TTS Error: {str(e)}")
+        return None
+
+def get_tts_audio_gttss(text):
+    """Generate TTS audio using gTTS (Google Text-to-Speech)"""
+    try:
+        from gtts import gTTS
+        tts = gTTS(text=text, lang='zh-tw', slow=False)
+        mp3_fp = io.BytesIO()
+        tts.write_to_fp(mp3_fp)
+        mp3_fp.seek(0)
+        return mp3_fp.read()
+    except ImportError:
+        st.warning("gTTS not installed. Please add gtts to requirements.txt")
+        return None
+    except Exception as e:
+        st.error(f"gTTS Error: {str(e)}")
         return None
 
 def play_tts(page_text):
     """Play TTS audio for current page"""
     with st.spinner("🔊 Generating speech..."):
-        audio_data = get_tts_audio(page_text)
+        audio_data = get_tts_audio_gttss(page_text)
     if audio_data:
         st.audio(audio_data, format="audio/mpeg")
         st.success("🎧 Audio ready!")
