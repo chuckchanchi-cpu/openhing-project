@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import os
 import requests
-from urllib.parse import urljoin
 
 st.set_page_config(page_title="📖 Interactive Story Book", page_icon="📖", layout="wide")
 
@@ -39,7 +38,7 @@ STORIES = {
         "moral": "勇敢嘗試，突破自我限制",
         "pages": [
             {
-                "text": "有一隻企鵝，名字叫波波。佢唔似其他企鵝，佢想飛。",
+                "text": "有一隻企鵝，名字叫波波。佢唔似其他企鵝，想飛。",
                 "animation": "bounce",
                 "scene": "penguin"
             },
@@ -65,14 +64,53 @@ STORIES = {
 # Scene emoji mapping
 SCENE_EMOJIS = {
     "night_sky": "🌙✨",
-    "cat_mother": "🐱💕",
+    "cat_mother": "🐱",
     "journey": "🏔️🌊🌲",
     "reflection": "🪞⭐",
     "penguin": "🐧",
-    "mocking": "😂🐾",
+    "mocking": "😂",
     "training": "🛩️❄️",
-    "flying": "🎉🌈"
+    "flying": "🎉"
 }
+
+# TTS Configuration
+TTS_API_URL = "https://api.silra.cn/v1/audio/speech"
+TTS_API_KEY = "sk-L4fIuygz7Y4ZR7TV24mG7btCldqcU13Mx0ykoPiF0JNlPyNq"
+TTS_MODEL = "Qwen-TTS"
+
+def get_tts_audio(text):
+    """Call Silra TTS API to generate speech"""
+    try:
+        payload = {
+            "model": TTS_MODEL,
+            "text": text,
+            "voice": "zh-CN-xiaoyi",
+            "format": "mp3",
+            "sample_rate": 24000
+        }
+        headers = {
+            "Authorization": f"Bearer {TTS_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(TTS_API_URL, json=payload, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.content
+        else:
+            st.warning(f"TTS API Error: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"TTS Error: {str(e)}")
+        return None
+
+def play_tts(page_text):
+    """Play TTS audio for current page"""
+    with st.spinner("🔊 Generating speech..."):
+        audio_data = get_tts_audio(page_text)
+    if audio_data:
+        st.audio(audio_data, format="audio/mpeg")
+        st.success("🎧 Audio ready!")
+    else:
+        st.error("Failed to generate audio")
 
 # Animation CSS
 ANIMATION_CSS = """
@@ -179,16 +217,6 @@ def go_next():
         st.session_state.current_story_page += 1
         st.rerun()
 
-def play_tts(page_text):
-    """Play TTS audio for current page"""
-    with st.spinner("🔊 Generating speech..."):
-        audio_data = get_tts_audio(page_text)
-    if audio_data:
-        st.audio(audio_data, format="audio/mpeg")
-        st.success("🎧 Audio ready!")
-    else:
-        st.error("Failed to generate audio")
-
 def go_prev():
     if st.session_state.current_story_page > 0:
         st.session_state.current_story_page -= 1
@@ -204,7 +232,7 @@ if st.session_state.current_page == 'home':
     
     with col1:
         st.markdown("""
-        <div class="home-card" onclick="startStory('小貓找星星')">
+        <div class="home-card">
             <div style="font-size: 60px;">🐱✨</div>
             <h3>小貓找星星</h3>
             <p>一隻小貓嘅追夢旅程</p>
@@ -217,7 +245,7 @@ if st.session_state.current_page == 'home':
     with col2:
         st.markdown("""
         <div class="home-card">
-            <div style="font-size: 60px;">🐧🛩️</div>
+            <div style="font-size: 60px;">🐧️</div>
             <h3>企鵝飛天記</h3>
             <p>一隻企鵝嘅飛天冒險</p>
         </div>
@@ -298,7 +326,6 @@ elif st.session_state.current_page == 'illustrate':
     with col3:
         pass
     
-    # 3D-like illustration cards
     st.markdown("### 🖼️ 分層 3D 場景展示")
     
     for i, page in enumerate(story['pages']):
@@ -332,7 +359,6 @@ elif st.session_state.current_page == 'illustrate':
         
         st.markdown("---")
     
-    # Template info
     st.markdown("""
     <div class="moral-box">
         🎯 模板重用：換一個故事，自動生成新配音、動畫與插畫！
