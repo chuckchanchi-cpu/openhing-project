@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import os
+import requests
+from urllib.parse import urljoin
 
 st.set_page_config(page_title="📖 Interactive Story Book", page_icon="📖", layout="wide")
 
@@ -177,6 +179,16 @@ def go_next():
         st.session_state.current_story_page += 1
         st.rerun()
 
+def play_tts(page_text):
+    """Play TTS audio for current page"""
+    with st.spinner("🔊 Generating speech..."):
+        audio_data = get_tts_audio(page_text)
+    if audio_data:
+        st.audio(audio_data, format="audio/mpeg")
+        st.success("🎧 Audio ready!")
+    else:
+        st.error("Failed to generate audio")
+
 def go_prev():
     if st.session_state.current_story_page > 0:
         st.session_state.current_story_page -= 1
@@ -256,7 +268,7 @@ elif st.session_state.current_page == 'read':
             go_prev()
     with col2:
         if st.button("🔊 朗讀呢頁", use_container_width=True):
-            st.info("🔊 朗讀功能：文字轉語音 (TTS)")
+            play_tts(page['text'])
     with col3:
         if st.button("下一頁 ➡️", disabled=current_idx == len(pages) - 1, use_container_width=True):
             go_next()
