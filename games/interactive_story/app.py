@@ -106,7 +106,7 @@ def get_tts_audio_gttss(text):
     """Generate TTS audio using gTTS (Google Text-to-Speech)"""
     try:
         from gtts import gTTS
-        tts = gTTS(text=text, lang='zh-tw', slow=False)
+        tts = gTTS(text=text, lang='yue', slow=False)
         mp3_fp = io.BytesIO()
         tts.write_to_fp(mp3_fp)
         mp3_fp.seek(0)
