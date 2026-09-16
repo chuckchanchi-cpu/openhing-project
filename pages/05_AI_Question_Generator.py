@@ -282,7 +282,7 @@ if st.session_state.generated_questions:
             if added > 0:
                 st.session_state.pending_added = added
                 st.success(f"🎉 已發布 {added} 條題目去練習平台！")
-                st.info("👉 撳左邊 sidebar「04_AI_練習平台」→ 揀科目「🆕 老師新生成」（⚠️ 用同一個 tab）")
+                st.info("👉 撳左邊 sidebar「🏋️ AI 練習平台」→ 揀科目「🆕 老師新生成」（⚠️ 用同一個 tab）")
                 st.balloons()
             else:
                 st.info("呢批題目已經發布過，冇重複加入")
