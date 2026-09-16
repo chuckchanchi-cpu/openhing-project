@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>English Vocab Game — Unit 1 A Helping Hand</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#e8fdee 0%,#d0f5dc 50%,#b5e8c8 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#1d6b3f; }
+  .header .sub { color:#3d8b5e; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#f0fff4; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(29,107,63,.15); font-size:1em; color:#1d6b3f; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(29,107,63,.2); margin-bottom:16px; }
+  .qnum { color:#5ac08a; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .question { font-size:1.25em; line-height:1.9; color:#14302a; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#8fd4a8,#4ab878); color:#fff; font-size:1.15em;
+    font-weight:bold; padding:12px 16px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #2f8a58, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #2f8a58, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#1d6b3f; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#2a4a3a; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>📗 English Vocab Game</h1>
+    <div class="sub">Unit 1 · A Helping Hand</div>
+  </div>
+
+  <div class="stats">
+    <span>Q<span id="qnum">1</span> / <span id="qtotal">12</span></span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel">Question 1</div>
+    <div class="question" id="question"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">Well done!</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 Play again</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { q: "We ________ money to help sick children.", a: "donate", opt: ["donate","adopt","sell","visit"] },
+  { q: "She wants to ________ a pet from the SPCA.", a: "adopt", opt: ["adopt","donate","sell","visit"] },
+  { q: "Chris ________ flags on the street to raise money.", a: "sells", opt: ["sells","buys","visits","gives"] },
+  { q: "Ben goes on a ________ with his friends.", a: "walkathon", opt: ["walkathon","fair","home","book"] },
+  { q: "We ________ an elderly home every Sunday.", a: "visit", opt: ["visit","adopt","donate","sell"] },
+  { q: "People who have no home are ________.", a: "homeless", opt: ["homeless","blind","elderly","sick"] },
+  { q: "A ________ helps people in need.", a: "volunteer", opt: ["volunteer","flag","ticket","book"] },
+  { q: "My sister bought three ________ for the lucky draw.", a: "raffle tickets", opt: ["raffle tickets","old books","pets","walks"] },
+  { q: "We take part in a ________ to raise money.", a: "fund-raising fair", opt: ["fund-raising fair","walkathon","elderly home","charity shop"] },
+  { q: "Which activity means \u201cwalking to raise money\u201d?", a: "go on a walkathon", opt: ["go on a walkathon","visit an elderly home","adopt a pet","sell flags"] },
+  { q: "We ________ old books to children in need.", a: "give away", opt: ["give away","take part","go on","buy"] },
+  { q: "Which one means \u201cto give money to help people\u201d?", a: "donate money", opt: ["donate money","adopt a pet","sell flags","give away old books"] }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qLabel").textContent = "Question " + (idx + 1);
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  if (w === q.a) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ Correct!";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ Try again!";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 Well done!" : "💪 Keep going!";
+  document.getElementById("endMsg").innerHTML =
+    "Score: " + score + "<br>" +
+    (completed ? "You finished all " + QUESTIONS.length + " questions!" : "Practice more and you will get it!");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// Shuffle questions every time
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

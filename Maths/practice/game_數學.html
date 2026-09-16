@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>數學挑戰 — 周界面積・大數</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#fdf3e8 0%,#f5e3d0 50%,#e8d0b5 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#6b4f1d; }
+  .header .sub { color:#8b6d3d; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#fff8f0; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(107,79,29,.15); font-size:1em; color:#6b4f1d; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(107,79,29,.2); margin-bottom:16px; }
+  .qnum { color:#c08a5a; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .question { font-size:1.25em; line-height:1.9; color:#402a14; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#f0c08f,#d89a4a); color:#fff; font-size:1.15em;
+    font-weight:bold; padding:12px 16px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #a8702f, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #a8702f, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#6b4f1d; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#4a3a2a; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔢 數學挑戰</h1>
+    <div class="sub">周界・面積・大數</div>
+  </div>
+
+  <div class="stats">
+    <span>第 <span id="qnum">1</span> / <span id="qtotal">12</span> 題</span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel">題目 1</div>
+    <div class="question" id="question"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">完成！</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 再玩一次</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { q: "長方形：長 12 cm、闊 8 cm。周界是多少？", a: "40 cm", opt: ["40 cm","96 cm","20 cm","48 cm"] },
+  { q: "長方形：長 12 cm、闊 8 cm。面積是多少？", a: "96 cm²", opt: ["96 cm²","40 cm²","20 cm²","48 cm²"] },
+  { q: "正方形：邊長 10 cm。周界是多少？", a: "40 cm", opt: ["40 cm","100 cm","20 cm","10 cm"] },
+  { q: "長方形：長 30 cm、闊 22 cm。周界是多少？", a: "104 cm", opt: ["104 cm","660 cm","52 cm","150 cm"] },
+  { q: "長方形：長 30 cm、闊 22 cm。面積是多少？", a: "660 cm²", opt: ["660 cm²","104 cm²","330 cm²","52 cm²"] },
+  { q: "長方形：長 14 cm、闊 2 cm。面積是多少？", a: "28 cm²", opt: ["28 cm²","32 cm²","16 cm²","14 cm²"] },
+  { q: "16,000,000 讀作甚麼？", a: "一千六百萬", opt: ["一千六百萬","一千零六十萬","一億六千萬","一百六十萬"] },
+  { q: "$7,893,000 讀作甚麼？", a: "七百八十九萬三千元", opt: ["七百八十九萬三千元","七千八百九十三萬元","七十八萬九千三百元","七億八千九百三十萬元"] },
+  { q: "以下哪一個數字最大？", a: "16,000,000", opt: ["16,000,000","$15,963,000","$7,893,000","$6,734,000"] },
+  { q: "$6,734,000 + $7,893,000 = ？", a: "$14,627,000", opt: ["$14,627,000","$14,627","$1,462,700","$146,270,000"] },
+  { q: "$15,963,000 − $6,734,000 = ？", a: "$9,229,000", opt: ["$9,229,000","$9,229","$922,900","$92,290,000"] },
+  { q: "16,000,000 中的「6」在哪一位？", a: "百萬位", opt: ["百萬位","十萬位","千萬位","億位"] }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qLabel").textContent = "題目 " + (idx + 1);
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  if (w === q.a) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ 答對了！";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ 再試試！";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 完成！" : "💪 加油！";
+  document.getElementById("endMsg").innerHTML =
+    "得分：" + score + " 分<br>" +
+    (completed ? "全部 " + QUESTIONS.length + " 題都答完了！" : "繼續練習，下次一定得！");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// 隨機排序題目，每次玩都唔同
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

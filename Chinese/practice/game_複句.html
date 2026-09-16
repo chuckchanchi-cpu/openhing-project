@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>近義詞遊戲 — 蘇格拉底與麥穗</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#e8f4fd 0%,#d0e9f7 50%,#b5d9ef 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#1d4f6b; }
+  .header .sub { color:#3d6f8b; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#f0f9ff; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(29,79,107,.15); font-size:1em; color:#1d4f6b; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(29,79,107,.2); margin-bottom:16px; }
+  .qnum { color:#5a9cc0; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .question { font-size:1.3em; line-height:1.8; color:#14303f; }
+  .blank { display:inline-block; min-width:3.2em; border-bottom:3px solid #5a9cc0;
+    color:#1d6fa3; font-weight:bold; text-align:center; margin:0 2px; }
+  .blank.filled { border-bottom-color:#4caf50; color:#2e7d32; }
+  .blank.wrong { border-bottom-color:#e05252; color:#e05252; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#8fd0f0,#4aa8d8); color:#fff; font-size:1.2em;
+    font-weight:bold; padding:12px 18px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #2f7fa8, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #2f7fa8, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#1d4f6b; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#2a4a5c; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 近義詞遊戲</h1>
+    <div class="sub">蘇格拉底與麥穗 · 分辨近義詞</div>
+  </div>
+
+  <div class="stats">
+    <span>第 <span id="qnum">1</span> / <span id="qtotal">12</span> 題</span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel">題目 1</div>
+    <div class="question" id="question"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">完成！</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 再玩一次</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { q: "「機會」的近義詞是哪一個？", a: "良機", opt: ["良機","麥穗","規矩","盡頭"] },
+  { q: "「寬廣」的近義詞是哪一個？", a: "廣闊", opt: ["廣闊","狹窄","漫長","金燦燦"] },
+  { q: "「捨棄」的近義詞是哪一個？", a: "放棄", opt: ["放棄","保存","把握","錯過"] },
+  { q: "「躊躇」的近義詞是哪一個？", a: "猶豫", opt: ["猶豫","決定","急忙","安靜"] },
+  { q: "「宛如」的近義詞是哪一個？", a: "好像", opt: ["好像","不像","唯一","漫長"] },
+  { q: "「東張西望」的近義詞是哪一個？", a: "左顧右盼", opt: ["左顧右盼","目不轉睛","東倒西歪","不約而同"] },
+  { q: "「錯過」的近義詞是哪一個？", a: "錯失", opt: ["錯失","把握","相遇","等待"] },
+  { q: "「漫長」的近義詞是哪一個？", a: "長久", opt: ["長久","短暫","寬廣","唯一"] },
+  { q: "「唯一」的近義詞是哪一個？", a: "獨一", opt: ["獨一","第一","全部","一半"] },
+  { q: "比賽最後一分鐘，他把握＿＿＿＿，射入致勝的一球。", a: "時機", opt: ["時機","機會","規矩","盡頭"] },
+  { q: "因為猶豫不決，他一再錯失＿＿＿＿。", a: "良機", opt: ["良機","時機","慕名","捨棄"] },
+  { q: "漫長的人生宛如在＿＿＿＿的麥田中前行。", a: "寬廣", opt: ["寬廣","廣闊","狹窄","沉甸甸"] }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qLabel").textContent = "題目 " + (idx + 1);
+  const hasBlank = q.q.includes("＿＿＿＿");
+  document.getElementById("question").innerHTML = hasBlank
+    ? q.q.replace("＿＿＿＿", '<span class="blank" id="blank">＿＿＿＿</span>')
+    : q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  const blank = document.getElementById("blank");
+  if (w === q.a) {
+    if (blank) { blank.textContent = w; blank.classList.add("filled"); }
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ 答對了！";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ 再試試！";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      if (blank) { blank.textContent = q.a; blank.classList.add("wrong"); }
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 完成！" : "💪 加油！";
+  document.getElementById("endMsg").innerHTML =
+    "得分：" + score + " 分<br>" +
+    (completed ? "全部 " + QUESTIONS.length + " 題都答完了！" : "繼續練習，下次一定得！");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// 隨機排序題目，每次玩都唔同
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

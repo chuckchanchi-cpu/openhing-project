@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>綜合挑戰 — 車程 30 分鐘版</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#eef0fd 0%,#dde0f5 50%,#c5cae8 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#3f3f6b; }
+  .header .sub { color:#5d5d8b; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#f4f5ff; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(63,63,107,.15); font-size:1em; color:#3f3f6b; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(63,63,107,.2); margin-bottom:16px; }
+  .qnum { color:#7a7ac0; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .tag { display:inline-block; background:#e8e9ff; color:#4a4a8a; border-radius:8px;
+    padding:2px 10px; font-size:0.8em; margin-right:8px; }
+  .question { font-size:1.2em; line-height:1.9; color:#20203f; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#a8b0f0,#6a74d8); color:#fff; font-size:1.15em;
+    font-weight:bold; padding:12px 18px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #4a52a8, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #4a52a8, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#3f3f6b; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#2a2a4a; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚗 綜合挑戰</h1>
+    <div class="sub">車程 30 分鐘版・中文＋英文＋常識・40 題</div>
+  </div>
+
+  <div class="stats">
+    <span>第 <span id="qnum">1</span> / <span id="qtotal">40</span> 題</span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel"><span class="tag" id="tag">中文填充</span>題目 1</div>
+    <div class="question" id="question"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">完成！</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 再玩一次</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { tag: "中文填充", q: "他＿＿＿＿了一會，才決定摘下那棵麥穗。", a: "躊躇", opt: ['躊躇', '捨棄', '錯過', '漫長'] },
+  { tag: "中文填充", q: "聽完老師的解釋，他＿＿＿＿。", a: "恍然大悟", opt: ['恍然大悟', '語重心長', '不約而同', '慕名'] },
+  { tag: "中文填充", q: "老師＿＿＿＿地勸我們要珍惜時間。", a: "語重心長", opt: ['語重心長', '金燦燦', '沉甸甸', '漫長'] },
+  { tag: "中文填充", q: "大家＿＿＿＿地鼓起掌來。", a: "不約而同", opt: ['不約而同', '恍然大悟', '躊躇', '捨棄'] },
+  { tag: "中文填充", q: "切勿錯失＿＿＿＿。", a: "良機", opt: ['良機', '盡頭', '規矩', '麥穗'] },
+  { tag: "中文填充", q: "許多遊客＿＿＿＿而來，品嘗這家老店的點心。", a: "慕名", opt: ['慕名', '躊躇', '捨棄', '唯一'] },
+  { tag: "中文填充", q: "夕陽把麥田照得＿＿＿＿的。", a: "金燦燦", opt: ['金燦燦', '沉甸甸', '漫長', '規矩'] },
+  { tag: "中文填充", q: "他捧着＿＿＿＿的獎杯，十分興奮。", a: "沉甸甸", opt: ['沉甸甸', '金燦燦', '唯一', '盡頭'] },
+  { tag: "中文填充", q: "這是他＿＿＿＿的機會，一定要好好珍惜。", a: "唯一", opt: ['唯一', '良機', '漫長', '慕名'] },
+  { tag: "中文填充", q: "我們要遵守學校的＿＿＿＿。", a: "規矩", opt: ['規矩', '盡頭', '良機', '麥穗'] },
+  { tag: "中文文法", q: "「＿＿＿得到最大的麥穗固然理想，＿＿＿後面可能有更大的。」應填甚麼關聯詞？", a: "雖然……但是……", opt: ['雖然……但是……', '因為……所以……', '不但……而且……', '如果……就……'] },
+  { tag: "中文文法", q: "課文中「麥穗」借喻甚麼？", a: "機會", opt: ['機會', '收成', '糧食', '種子'] },
+  { tag: "中文文法", q: "「雨後的彩虹宛如一座七彩的橋。」運用了甚麼修辭手法？", a: "明喻", opt: ['明喻', '暗喻', '借喻', '擬人'] },
+  { tag: "中文文法", q: "「他放棄了這棵麥穗，＿＿＿想往前找找看。」應填甚麼關聯詞？", a: "因為", opt: ['因為', '但是', '雖然', '如果'] },
+  { tag: "中文文法", q: "下列哪一句是「暗喻」？", a: "「時間就是金錢。」", opt: ['「時間就是金錢。」', '「月亮像一個玉盤。」', '「他跑得比兔子還快。」', '「春風又綠江南岸。」'] },
+  { tag: "中文文法", q: "「她＿＿＿會彈鋼琴，＿＿＿還擅長畫畫。」應填甚麼關聯詞？", a: "不但……而且……", opt: ['不但……而且……', '雖然……但是……', '因為……所以……', '與其……不如……'] },
+  { tag: "中文文法", q: "「＿＿＿下雨，我們＿＿＿會按時到校上課。」應填甚麼關聯詞？", a: "即使……也……", opt: ['即使……也……', '因為……所以……', '不但……而且……', '如果……就……'] },
+  { tag: "中文文法", q: "他因為熱愛閱讀，＿＿＿每天都去圖書館借書。應填甚麼關聯詞？", a: "所以", opt: ['所以', '但是', '雖然', '如果'] },
+  { tag: "中文文法", q: "「宛如」與下列哪個詞意思最接近？", a: "好像", opt: ['好像', '捨棄', '躊躇', '唯一'] },
+  { tag: "中文文法", q: "下列哪一組是近義詞？", a: "躊躇和猶豫", opt: ['躊躇和猶豫', '麥穗和機會', '規矩和良機', '捨棄和唯一'] },
+  { tag: "英文文法", q: "She helps people ____ have no home.", a: "who", opt: ['who', 'which', 'so', 'where'] },
+  { tag: "英文文法", q: "The SPCA is an animal charity ____ helps and saves animals.", a: "which", opt: ['which', 'who', 'so', 'but'] },
+  { tag: "英文文法", q: "We have adopted a pet from the SPCA recently, ____ I hope you can help the SPCA.", a: "so", opt: ['so', 'because', 'but', 'where'] },
+  { tag: "英文文法", q: "We can visit hospitals and play games with children ____ are sick.", a: "who", opt: ['who', 'which', 'so', 'where'] },
+  { tag: "英文文法", q: "I will go on a walkathon soon, ____ I can collect money to help blind people.", a: "so", opt: ['so', 'but', 'where', 'when'] },
+  { tag: "英文文法", q: "I want to help the homeless, ____ I help prepare meals for them.", a: "so", opt: ['so', 'who', 'which', 'but'] },
+  { tag: "英文文法", q: "We can support a food charity ____ prepares food for people in need.", a: "which", opt: ['which', 'who', 'so', 'but'] },
+  { tag: "英文文法", q: "We can give clothes and toys to boys and girls ____ need them.", a: "who", opt: ['who', 'which', 'so', 'where'] },
+  { tag: "英文文法", q: "Chris ____ flags on the street to raise money.", a: "sells", opt: ['sells', 'buys', 'gives', 'adopts'] },
+  { tag: "英文文法", q: "Ben will ____ to collect money for charity.", a: "go on a walkathon", opt: ['go on a walkathon', 'adopt a pet', 'sell flags', 'visit an elderly home'] },
+  { tag: "常識", q: "蛙的皮膚濕潤、沒有鱗片，成長後用肺和皮膚呼吸。牠屬於哪一類？", a: "兩棲類", opt: ['兩棲類', '爬行類', '魚類', '哺乳類'] },
+  { tag: "常識", q: "蝙蝠有翅膀會飛，但有毛髮、用母乳餵養幼兒。牠屬於哪一類？", a: "哺乳類", opt: ['哺乳類', '鳥類', '爬行類', '兩棲類'] },
+  { tag: "常識", q: "海龜有殼、皮膚乾燥、有鱗片、用肺呼吸。牠屬於哪一類？", a: "爬行類", opt: ['爬行類', '魚類', '哺乳類', '兩棲類'] },
+  { tag: "常識", q: "判斷：魚類用肺呼吸。", a: "錯誤", opt: ['正確', '錯誤'] },
+  { tag: "常識", q: "蕨類以甚麼繁殖？", a: "孢子", opt: ['孢子', '種子', '球果', '花朵'] },
+  { tag: "常識", q: "蜜蜂有三對腳、身體分頭胸腹三部分、有一對觸角。牠屬於哪一類？", a: "昆蟲類", opt: ['昆蟲類', '鳥類', '兩棲類', '哺乳類'] },
+  { tag: "常識", q: "蠑螈皮膚濕潤、無鱗片、成長後用肺和皮膚呼吸。牠屬於哪一類？", a: "兩棲類", opt: ['兩棲類', '爬行類', '魚類', '哺乳類'] },
+  { tag: "常識", q: "判斷：所有爬行類都有四隻腳。", a: "錯誤", opt: ['正確', '錯誤'] },
+  { tag: "常識", q: "課文中提到的兩種無花植物是甚麼？", a: "苔蘚類和蕨類", opt: ['苔蘚類和蕨類', '睡蓮和鳳凰木', '海藻和睡蓮', '松樹和鳳凰木'] },
+  { tag: "常識", q: "松樹的種子生在甚麼地方？", a: "球果內", opt: ['球果內', '花朵裏', '葉子上', '根部'] }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("tag").textContent = q.tag;
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  if (w === q.a) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ 答對了！";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ 再試試！";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 完成！" : "💪 加油！";
+  document.getElementById("endMsg").innerHTML =
+    "得分：" + score + " 分<br>" +
+    (completed ? "全部 " + QUESTIONS.length + " 題都答完了！" : "繼續練習，下次一定得！");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// 隨機排序題目，每次玩都唔同
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

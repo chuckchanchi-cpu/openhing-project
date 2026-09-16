@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>詞語填充遊戲 — 蘇格拉底與麥穗（17詞）</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#fdf6e3 0%,#f5e6c8 50%,#e8d5a8 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#6b4f1d; }
+  .header .sub { color:#8a6d3b; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#fff8e7; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(107,79,29,.15); font-size:1em; color:#6b4f1d; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(107,79,29,.2); margin-bottom:16px; }
+  .qnum { color:#c9a45c; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .sentence { font-size:1.3em; line-height:1.8; color:#3d2f14; }
+  .blank { display:inline-block; min-width:3.2em; border-bottom:3px solid #c9a45c;
+    color:#b8860b; font-weight:bold; text-align:center; margin:0 2px; }
+  .blank.filled { border-bottom-color:#4caf50; color:#2e7d32; }
+  .blank.wrong { border-bottom-color:#e05252; color:#e05252; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#ffd97a,#f5b83d); color:#5a3e0e; font-size:1.2em;
+    font-weight:bold; padding:12px 18px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #c98f1b, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #c98f1b, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#6b4f1d; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#5a4a2a; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🌾 詞語填充遊戲</h1>
+    <div class="sub">蘇格拉底與麥穗 · 17 詞訓練</div>
+  </div>
+
+  <div class="stats">
+    <span>第 <span id="qnum">1</span> / <span id="qtotal">17</span> 題</span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel">題目 1</div>
+    <div class="sentence" id="sentence"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">完成！</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 再玩一次</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { s: "這間博物館非常有名，許多人＿＿＿＿＿＿而來參觀。", a: "慕名" },
+  { s: "農夫在田裏收割金黃的＿＿＿＿＿＿，臉上掛着豐收的喜悅。", a: "麥穗" },
+  { s: "他輸了比賽，心裏十分＿＿＿＿＿＿，決心下次一定要贏回來。", a: "不忿" },
+  { s: "湖面平靜無波，＿＿＿＿＿＿一面鏡子，倒映着藍天白雲。", a: "宛如" },
+  { s: "面對兩個同樣吸引的選擇，他＿＿＿＿＿＿了很久，還是決定不了。", a: "躊躇" },
+  { s: "＿＿＿＿＿＿的陽光灑在麥田上，整片田野都閃閃發光。", a: "金燦燦" },
+  { s: "為了追求音樂夢想，他＿＿＿＿＿＿了舒適的生活，毅然踏上創作之路。", a: "捨棄" },
+  { s: "麥田裏的麥穗＿＿＿＿＿＿地垂下頭來，看來今年的收成很好。", a: "沉甸甸" },
+  { s: "玩遊戲之前，要先說清楚＿＿＿＿＿＿，大家才能公平地玩。", a: "規矩" },
+  { s: "他一口氣跑到街道的＿＿＿＿＿＿，才停下來喘氣。", a: "盡頭" },
+  { s: "聽到這個好消息，大家＿＿＿＿＿＿地拍手叫好。", a: "不約而同" },
+  { s: "因為猶豫不決，他＿＿＿＿＿＿了採摘麥穗的最好時機。", a: "錯過" },
+  { s: "老師＿＿＿＿＿＿地對我們說：「時間一去不返，要好好珍惜。」", a: "語重心長" },
+  { s: "聽完老師的解釋，我＿＿＿＿＿＿，原來道理是這樣的！", a: "恍然大悟" },
+  { s: "人生的道路很＿＿＿＿＿＿，我們要一步一步踏實地走下去。", a: "漫長" },
+  { s: "這是他＿＿＿＿＿＿的機會，一定要好好把握。", a: "唯一" },
+  { s: "機會來了就要馬上把握，否則就會錯失＿＿＿＿＿＿。", a: "良機" },
+  // 第二回
+  { s: "這家老字號茶樓遠近馳名，不少遊客都＿＿＿＿＿＿前來一試。", a: "慕名" },
+  { s: "秋風吹過，田裏的＿＿＿＿＿＿隨風搖擺，像一片金色的海洋。", a: "麥穗" },
+  { s: "明明是他先動手，卻要罰我，我實在＿＿＿＿＿＿！", a: "不忿" },
+  { s: "雨後的彩虹掛在天邊，＿＿＿＿＿＿一座七彩的橋。", a: "宛如" },
+  { s: "他站在門口＿＿＿＿＿＿了一會，終於鼓起勇氣敲門。", a: "躊躇" },
+  { s: "沙灘上＿＿＿＿＿＿的幼沙，在陽光下閃閃發亮。", a: "金燦燦" },
+  { s: "為了照顧生病的媽媽，她＿＿＿＿＿＿了出國進修的機會。", a: "捨棄" },
+  { s: "他背着＿＿＿＿＿＿的書包，一步一步走上樓梯。", a: "沉甸甸" },
+  { s: "在圖書館要保持安靜，這是人人都要遵守的＿＿＿＿＿＿。", a: "規矩" },
+  { s: "沿着這條小路走到＿＿＿＿＿＿，就會看到一座燈塔。", a: "盡頭" },
+  { s: "考試結束的鈴聲一響，同學們＿＿＿＿＿＿地放下鉛筆。", a: "不約而同" },
+  { s: "因為遲到，他＿＿＿＿＿＿了巴士，只好等下一班。", a: "錯過" },
+  { s: "爸爸＿＿＿＿＿＿地提醒我：「做人要腳踏實地。」", a: "語重心長" },
+  { s: "看到答案的那一刻，我＿＿＿＿＿＿，原來自己算漏了一步。", a: "恍然大悟" },
+  { s: "在＿＿＿＿＿＿的暑假裏，他讀完了五本課外書。", a: "漫長" },
+  { s: "這條鑰匙是＿＿＿＿＿＿一條，千萬不要弄丟。", a: "唯一" },
+  { s: "航空公司推出優惠，正是出外旅遊的＿＿＿＿＿＿。", a: "良機" }
+];
+
+let idx = 0, hearts = 3, score = 0;
+const ALL_WORDS = QUESTIONS.map(q => q.a);
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qLabel").textContent = "題目 " + (idx + 1);
+  document.getElementById("sentence").innerHTML = q.s.replace("＿＿＿＿＿＿", '<span class="blank" id="blank">＿＿＿＿＿＿</span>');
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  // 4 choices: correct answer + 3 random others
+  const others = shuffle(ALL_WORDS.filter(w => w !== q.a)).slice(0, 3);
+  shuffle([q.a, ...others]).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  const blank = document.getElementById("blank");
+  if (w === q.a) {
+    blank.textContent = w;
+    blank.classList.add("filled");
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ 答對了！";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ 再試試！";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      blank.textContent = q.a;
+      blank.classList.add("wrong");
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 完成！" : "💪 加油！";
+  document.getElementById("endMsg").innerHTML =
+    "得分：" + score + " 分<br>" +
+    (completed ? "全部 17 題都答完了！" : "繼續練習，下次一定得！");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// 開始時隨機排序題目，每次玩都唔同
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

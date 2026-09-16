@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Justan 練習遊戲</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#fdf6e3 0%,#f5e6c8 50%,#e8d5a8 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px 16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:28px; }
+  .header h1 { font-size:1.5em; color:#6b4f1d; }
+  .header .sub { color:#8a6d3b; font-size:0.95em; margin-top:6px; }
+  .menu { display:flex; flex-direction:column; gap:16px; width:100%; max-width:440px; }
+  .game-btn {
+    display:flex; align-items:center; gap:14px; background:#fff; border:none;
+    border-radius:18px; padding:20px; cursor:pointer; text-align:left;
+    box-shadow:0 4px 14px rgba(107,79,29,.18); transition:transform .05s;
+  }
+  .game-btn:active { transform:scale(.97); }
+  .game-btn .icon { font-size:2.4em; }
+  .game-btn .info h2 { font-size:1.2em; color:#6b4f1d; margin-bottom:3px; }
+  .game-btn .info p { font-size:0.85em; color:#9a7f4d; }
+  .game-btn .arrow { margin-left:auto; font-size:1.8em; color:#c9a45c; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎮 Justan 練習遊戲</h1>
+    <div class="sub" id="sub">今日練習</div>
+  </div>
+  <div class="menu" id="menu">
+    <button class="game-btn" onclick="location.href='game11.html'">
+      <span class="icon">📘</span>
+      <span class="info"><h2>English Grammar 15 分鐘</h2><p>so / who / which / Phonics・15 題</p></span>
+      <span class="arrow">›</span>
+    </button>
+  </div>
+</body>
+</html>

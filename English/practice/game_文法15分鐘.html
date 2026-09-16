@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>English Grammar 15-Minute Practice</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#e8f0fe 0%,#d4e2f7 50%,#b8cff0 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#1e3a5c; }
+  .header .sub { color:#3d6a9a; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#f2f7fe; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(30,58,92,.15); font-size:1em; color:#1e3a5c; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(30,58,92,.2); margin-bottom:16px; }
+  .qnum { color:#3d6a9a; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .tag { display:inline-block; background:#dbe7f7; color:#1e3a5c; border-radius:8px;
+    padding:2px 10px; font-size:0.8em; margin-right:8px; }
+  .question { font-size:1.2em; line-height:1.8; color:#14263c; font-weight:bold; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#5b8dd6,#3568b0); color:#fff; font-size:1.1em;
+    font-weight:bold; padding:12px 18px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #1e3a5c, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; min-width:80px; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #1e3a5c, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .hintbtn { background:#fff3d6; color:#9a6b00; font-size:0.95em; font-weight:bold;
+    border:2px solid #f0c95c; padding:8px 22px; border-radius:20px; cursor:pointer; margin-top:12px; }
+  .hintbtn:active { background:#fce8b8; }
+  .hintbox { background:#fffbe8; border:1px dashed #e0b84e; color:#7a5b00;
+    border-radius:12px; padding:10px 14px; margin-top:10px; font-size:0.95em; line-height:1.7; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#1e3a5c; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#14263c; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fc1f7,#4a86d8); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e5f9e; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>📘 English Grammar Practice</h1>
+    <div class="sub">so &nbsp;·&nbsp; who / which &nbsp;·&nbsp; Phonics (c, ce, ss) &nbsp;·&nbsp; 15 questions</div>
+  </div>
+
+  <div class="stats">
+    <span>Q <span id="qnum">1</span> / <span id="qtotal">15</span></span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum"><span class="tag" id="tag">Grammar 1</span>Question <span id="qn">1</span></div>
+    <div class="question" id="question"></div>
+    <div style="text-align:center;">
+      <button class="hintbtn" id="hintBtn" onclick="showHint()">💡 Hint</button>
+    </div>
+    <div class="hintbox hidden" id="hintBox"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">Finished!</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 Play again</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { tag: "Grammar 1", q: "I want to help the homeless, ____ I help prepare meals for them.", a: "so", opt: ["so","because","but","which"], h: "Reason + comma + result. Use \"so\" before the result." },
+  { tag: "Grammar 1", q: "We have adopted a pet from the SPCA, ____ I hope you can help the SPCA too.", a: "so", opt: ["so","who","but","where"], h: "The second part is the result of adopting a pet." },
+  { tag: "Grammar 1", q: "I will go on a walkathon soon, ____ I can collect money to help blind people.", a: "so", opt: ["so","who","but","because"], h: "Walkathon → collect money = result. Use \"so\"." },
+  { tag: "Grammar 1", q: "Chris sells flags ____ he wants to raise money for the SPCA.", a: "because", opt: ["because","so","which","who"], h: "Why does Chris sell flags? The reason comes after. Use \"because\" for the reason." },
+  { tag: "Grammar 1", q: "Ben is very tired, ____ he keeps walking for charity.", a: "but", opt: ["but","so","who","which"], h: "Tired + keeps walking = opposite ideas. Use \"but\"." },
+  { tag: "Grammar 2", q: "She helps people ____ have no home.", a: "who", opt: ["who","which","so","where"], h: "People = persons. Use \"who\" for people." },
+  { tag: "Grammar 2", q: "We can visit hospitals and play games with children ____ are sick.", a: "who", opt: ["who","which","so","but"], h: "Children = people. Use \"who\"." },
+  { tag: "Grammar 2", q: "We can give clothes and toys to boys and girls ____ need them.", a: "who", opt: ["who","which","where","so"], h: "Boys and girls = people. Use \"who\"." },
+  { tag: "Grammar 2", q: "The SPCA is an animal charity ____ helps and saves animals.", a: "which", opt: ["which","who","so","but"], h: "A charity is a thing. Use \"which\" for things." },
+  { tag: "Grammar 2", q: "We can support a food charity ____ prepares food for people in need.", a: "which", opt: ["which","who","so","because"], h: "A food charity = a thing. Use \"which\"." },
+  { tag: "Grammar 2", q: "We use \"who\" for ____.", a: "people", opt: ["people","things","places","animals"], h: "who = people (he, she, they)." },
+  { tag: "Grammar 2", q: "We use \"which\" for ____.", a: "things", opt: ["things","people","actions","feelings"], h: "which = things (it, they)." },
+  { tag: "Phonics", q: "Which word has a DIFFERENT sound?", a: "cat", opt: ["cat","rice","centre","class"], h: "rice, centre and class all have the /s/ sound. Cat has the /k/ sound." },
+  { tag: "Phonics", q: "In the word \"rice\", which letters make the /s/ sound?", a: "ce", opt: ["ce","ri","ic","ss"], h: "Look at the end of rice: r-i-c-e. \"ce\" makes the /s/ sound." },
+  { tag: "Phonics", q: "In the word \"homeless\", the letters \"ss\" make the ____ sound.", a: "/s/", opt: ["/s/","/z/","/k/","/sh/"], h: "ss = /s/, like in \"class\" and \"homeless\"." }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showHint() {
+  const q = QUESTIONS[idx];
+  const box = document.getElementById("hintBox");
+  box.textContent = "💡 " + q.h;
+  box.classList.remove("hidden");
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("hintBox").classList.add("hidden");
+  document.getElementById("hintBox").textContent = "";
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qn").textContent = idx + 1;
+  document.getElementById("tag").textContent = q.tag;
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  if (w === q.a) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ Correct!";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ Try again!";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 Finished!" : "💪 Keep going!";
+  document.getElementById("endMsg").innerHTML =
+    "Score: " + score + " points<br>" +
+    (completed ? "You answered all " + QUESTIONS.length + " questions!" : "Practice more and you will get it!");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

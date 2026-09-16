@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>常識挑戰 — 生物的分類</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background: linear-gradient(160deg,#e8f8ec 0%,#d0f0da 50%,#b5e0c4 100%);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px; user-select:none;
+  }
+  .header { text-align:center; margin-bottom:12px; width:100%; max-width:520px; }
+  .header h1 { font-size:1.35em; color:#1d6b3f; }
+  .header .sub { color:#3d8b5d; font-size:0.9em; margin-top:4px; }
+  .stats { display:flex; justify-content:space-between; width:100%; max-width:520px;
+    background:#f0fff4; border-radius:14px; padding:10px 16px; margin-bottom:14px;
+    box-shadow:0 2px 8px rgba(29,107,63,.15); font-size:1em; color:#1d6b3f; font-weight:bold; }
+  .hearts { color:#e05252; font-size:1.2em; letter-spacing:2px; }
+  .card { background:#fff; border-radius:18px; padding:22px 18px; width:100%; max-width:520px;
+    box-shadow:0 4px 16px rgba(29,107,63,.2); margin-bottom:16px; }
+  .qnum { color:#5ac08a; font-size:0.85em; font-weight:bold; margin-bottom:8px; }
+  .question { font-size:1.2em; line-height:1.9; color:#14302a; }
+  .words { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .word { background:linear-gradient(180deg,#8fd4a8,#4ac87e); color:#fff; font-size:1.15em;
+    font-weight:bold; padding:12px 18px; border-radius:14px; border:none; cursor:pointer;
+    box-shadow:0 3px 0 #2f9e5f, 0 4px 10px rgba(0,0,0,.15); transition:transform .05s; }
+  .word:active { transform:translateY(3px); box-shadow:0 0 0 #2f9e5f, 0 2px 6px rgba(0,0,0,.15); }
+  .word.used { opacity:.25; pointer-events:none; }
+  .feedback { text-align:center; font-size:1.15em; font-weight:bold; min-height:1.8em; margin-top:14px; }
+  .ok { color:#2e7d32; } .no { color:#e05252; }
+  .end { text-align:center; padding:10px 0; }
+  .end h2 { color:#1d6b3f; font-size:1.5em; margin-bottom:8px; }
+  .end .stars { font-size:2.6em; letter-spacing:6px; margin:10px 0; }
+  .end p { color:#2a4a3a; font-size:1.1em; line-height:1.7; }
+  .btn { background:linear-gradient(180deg,#8fd47f,#4caf50); color:#fff; font-size:1.2em;
+    font-weight:bold; border:none; padding:14px 34px; border-radius:30px; margin-top:16px;
+    box-shadow:0 3px 0 #2e7d32; cursor:pointer; }
+  .btn:active { transform:translateY(3px); box-shadow:none; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🐸 常識挑戰</h1>
+    <div class="sub">Unit 1・生物的分類（動物＋植物）</div>
+  </div>
+
+  <div class="stats">
+    <span>第 <span id="qnum">1</span> / <span id="qtotal">18</span> 題</span>
+    <span class="hearts" id="hearts">❤️❤️❤️</span>
+    <span>⭐ <span id="score">0</span></span>
+  </div>
+
+  <div class="card" id="gameCard">
+    <div class="qnum" id="qLabel">題目 1</div>
+    <div class="question" id="question"></div>
+    <div class="words" id="words"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card end hidden" id="endCard">
+    <h2 id="endTitle">完成！</h2>
+    <div class="stars" id="stars">⭐⭐⭐</div>
+    <p id="endMsg"></p>
+    <button class="btn" onclick="restart()">🔄 再玩一次</button>
+  </div>
+
+<script>
+let QUESTIONS = [
+  { q: "蛙的皮膚濕潤、沒有鱗片，幼兒在水中生活，成長後用肺和皮膚呼吸。牠屬於哪一類？", a: "兩棲類", opt: ["兩棲類","爬行類","魚類","哺乳類"] },
+  { q: "蛇沒有腳、皮膚乾燥、有乾硬鱗片、用肺呼吸。牠屬於哪一類？", a: "爬行類", opt: ["爬行類","兩棲類","鳥類","昆蟲類"] },
+  { q: "金翅雀全身長有羽毛、有喙、一對翅膀和一對腳、用肺呼吸。牠屬於哪一類？", a: "鳥類", opt: ["鳥類","哺乳類","兩棲類","魚類"] },
+  { q: "鯉魚用鰭游動、用鰓呼吸、身體通常長有鱗片。牠屬於哪一類？", a: "魚類", opt: ["魚類","哺乳類","爬行類","兩棲類"] },
+  { q: "蜜蜂有三對腳、身體分頭胸腹三部分、有一對觸角。牠屬於哪一類？", a: "昆蟲類", opt: ["昆蟲類","鳥類","兩棲類","哺乳類"] },
+  { q: "蠑螈皮膚濕潤、無鱗片、成長後用肺和皮膚呼吸。牠屬於哪一類？", a: "兩棲類", opt: ["兩棲類","爬行類","魚類","哺乳類"] },
+  { q: "蝙蝠有翅膀會飛，但身體表面有毛髮、用母乳餵養幼兒。牠屬於哪一類？", a: "哺乳類", opt: ["哺乳類","鳥類","爬行類","兩棲類"] },
+  { q: "海豚住在海裏用鰭游動，但用母乳餵養幼兒、用肺呼吸。牠屬於哪一類？", a: "哺乳類", opt: ["哺乳類","魚類","兩棲類","爬行類"] },
+  { q: "海龜有殼、皮膚乾燥、有鱗片、用肺呼吸，即使生活在海裏。牠屬於哪一類？", a: "爬行類", opt: ["爬行類","魚類","哺乳類","兩棲類"] },
+  { q: "我們可按動物的特徵和習性，把牠們分為鳥類、魚類、＿＿＿、爬行類、＿＿＿等類別。", a: "哺乳類、兩棲類", opt: ["哺乳類、兩棲類","昆蟲類、軟體類","爬行類、魚類","兩棲類、昆蟲類"] },
+  { q: "判斷：所有爬行類都有四隻腳。", a: "錯誤", opt: ["正確","錯誤"] },
+  { q: "判斷：魚類用肺呼吸。", a: "錯誤", opt: ["正確","錯誤"] },
+  { q: "判斷：蕨類以孢子繁殖。", a: "正確", opt: ["正確","錯誤"] },
+  { q: "判斷：睡蓮是陸生植物。", a: "錯誤", opt: ["正確","錯誤"] },
+  { q: "判斷：松樹開花後才結出種子。", a: "錯誤", opt: ["正確","錯誤"] },
+  { q: "判斷：鳳凰木是陸生植物。", a: "正確", opt: ["正確","錯誤"] },
+  { q: "課文中提到的兩種無花植物是甚麼？", a: "苔蘚類和蕨類", opt: ["苔蘚類和蕨類","睡蓮和鳳凰木","海藻和睡蓮","松樹和鳳凰木"] },
+  { q: "有花植物主要靠甚麼繁殖？", a: "種子", opt: ["種子","孢子","球果","根"] }
+];
+
+let idx = 0, hearts = 3, score = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const q = QUESTIONS[idx];
+  document.getElementById("qnum").textContent = idx + 1;
+  document.getElementById("qtotal").textContent = QUESTIONS.length;
+  document.getElementById("qLabel").textContent = "題目 " + (idx + 1);
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  const wordsBox = document.getElementById("words");
+  wordsBox.innerHTML = "";
+  shuffle(q.opt).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "word";
+    b.textContent = w;
+    b.onclick = () => pick(w, b);
+    wordsBox.appendChild(b);
+  });
+}
+
+function pick(w, btn) {
+  const q = QUESTIONS[idx];
+  if (w === q.a) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    const fb = document.getElementById("feedback");
+    fb.textContent = "✅ 答對了！";
+    fb.className = "feedback ok";
+    btn.classList.add("used");
+    setTimeout(next, 800);
+  } else {
+    btn.classList.add("used");
+    hearts--;
+    document.getElementById("hearts").textContent = "❤️".repeat(hearts) + "🖤".repeat(3 - hearts);
+    const fb = document.getElementById("feedback");
+    fb.textContent = "❌ 再試試！";
+    fb.className = "feedback no";
+    if (hearts <= 0) {
+      setTimeout(() => { endGame(false); }, 900);
+    }
+  }
+}
+
+function next() {
+  idx++;
+  if (idx >= QUESTIONS.length) { endGame(true); return; }
+  render();
+}
+
+function endGame(completed) {
+  document.getElementById("gameCard").classList.add("hidden");
+  const endCard = document.getElementById("endCard");
+  endCard.classList.remove("hidden");
+  const stars = completed ? (hearts === 3 ? 3 : hearts === 2 ? 2 : 1) : 0;
+  document.getElementById("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  document.getElementById("endTitle").textContent = completed ? "🎉 完成！" : "💪 加油！";
+  document.getElementById("endMsg").innerHTML =
+    "得分：" + score + " 分<br>" +
+    (completed ? "全部 " + QUESTIONS.length + " 題都答完了！" : "繼續練習，下次一定得！");
+}
+
+function restart() {
+  idx = 0; hearts = 3; score = 0;
+  document.getElementById("hearts").textContent = "❤️❤️❤️";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("endCard").classList.add("hidden");
+  document.getElementById("gameCard").classList.remove("hidden");
+  render();
+}
+
+// 隨機排序題目，每次玩都唔同
+QUESTIONS = shuffle(QUESTIONS);
+render();
+</script>
+</body>
+</html>

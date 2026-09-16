@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧬 生物分類大挑戰 - 常識科 Unit 1</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 1.5em; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 0.9em; }
+  .stats-bar {
+    display: flex; justify-content: space-between; margin-bottom: 20px;
+    padding: 10px 15px; background: #f0f0f0; border-radius: 10px; font-size: 0.95em;
+  }
+  .hearts { color: #e74c3c; font-size: 1.2em; }
+  .score-display { color: #2ecc71; font-weight: bold; }
+  .question-counter { color: #3498db; }
+  .question-box {
+    background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 20px;
+    border-left: 5px solid #667eea;
+  }
+  .question-text { font-size: 1.05em; color: #333; line-height: 1.6; margin-bottom: 15px; }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    padding: 14px 18px; border: 2px solid #ddd; border-radius: 12px;
+    background: white; cursor: pointer; font-size: 1em; transition: all 0.3s ease;
+    text-align: left; font-family: inherit;
+  }
+  .option-btn:hover { border-color: #667eea; background: #f0f0ff; transform: translateX(5px); }
+  .option-btn.correct { border-color: #2ecc71; background: #d4edda; color: #155724; animation: pulse 0.5s ease; }
+  .option-btn.wrong { border-color: #e74c3c; background: #f8d7da; color: #721c24; animation: shake 0.5s ease; }
+  .option-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+  .feedback {
+    text-align: center; padding: 12px; border-radius: 10px; margin-top: 15px;
+    font-weight: bold; display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: #d4edda; color: #155724; }
+  .feedback.wrong-fb { background: #f8d7da; color: #721c24; }
+  .next-btn {
+    display: none; width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+    border: none; border-radius: 12px; font-size: 1.1em; cursor: pointer;
+    margin-top: 15px; font-family: inherit; font-weight: bold; transition: transform 0.2s;
+  }
+  .next-btn:hover { transform: scale(1.02); }
+  .next-btn.show { display: block; }
+  .result-screen { text-align: center; display: none; }
+  .result-screen.show { display: block; }
+  .stars { font-size: 3em; margin: 15px 0; }
+  .final-score { font-size: 2em; color: #667eea; font-weight: bold; margin: 10px 0; }
+  .result-message { font-size: 1.1em; color: #555; margin: 10px 0 20px; }
+  .restart-btn {
+    padding: 14px 40px; background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; border: none; border-radius: 12px; font-size: 1.1em;
+    cursor: pointer; font-family: inherit; font-weight: bold;
+  }
+  .start-screen { text-align: center; }
+  .start-screen p { color: #666; margin: 10px 0 20px; line-height: 1.6; }
+  .start-btn {
+    padding: 16px 50px; background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; border: none; border-radius: 15px; font-size: 1.2em;
+    cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s;
+  }
+  .start-btn:hover { transform: scale(1.05); }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="start-screen" id="startScreen">
+    <h1>🧬 生物分類大挑戰</h1>
+    <p class="subtitle">常識科 Unit 1 — 生物的分類</p>
+    <p>🌟 20 條題目：動物分類、判斷題<br>❤️ 3 條命，撳錯會扣心<br>⭐ 完成後有星星評級<br>🔄 可以無限重玩</p>
+    <button class="start-btn" onclick="startGame()">開始遊戲 🚀</button>
+  </div>
+  <div id="gameScreen" style="display:none;">
+    <h1>🧬 生物分類大挑戰</h1>
+    <p class="subtitle">常識科 Unit 1 — 生物的分類</p>
+    <div class="stats-bar">
+      <span class="hearts" id="hearts">❤️❤️❤️</span>
+      <span class="score-display" id="scoreDisplay">分數: 0</span>
+      <span class="question-counter" id="qCounter">1 / 20</span>
+    </div>
+    <div class="question-box">
+      <div class="question-text" id="questionText"></div>
+      <div class="options" id="optionsContainer"></div>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">下一題 →</button>
+  </div>
+  <div class="result-screen" id="resultScreen">
+    <h1>🎉 遊戲完成！</h1>
+    <div class="stars" id="starsDisplay"></div>
+    <div class="final-score" id="finalScore"></div>
+    <div class="result-message" id="resultMessage"></div>
+    <button class="restart-btn" onclick="restartGame()">再玩一次 🔄</button>
+  </div>
+</div>
+<script>
+const questions = [
+  {q:"蛙的皮膚濕潤、沒有鱗片，幼兒在水中生活，成長後在陸上生活並用肺和皮膚呼吸。它是哪一類？", options:["爬行類","兩棲類","魚類"], answer:1},
+  {q:"蛇沒有腳、皮膚乾燥、有乾硬鱗片、用肺呼吸。它是哪一類？", options:["哺乳類","鳥類","爬行類"], answer:2},
+  {q:"金翅雀全身長有羽毛、有喙、一對翅膀和一對腳、用肺呼吸。它是哪一類？", options:["鳥類","哺乳類","兩棲類"], answer:0},
+  {q:"鯉魚用鰭游動、用鰓呼吸、身體通常長有鱗片。它是哪一類？", options:["魚類","爬行類","兩棲類"], answer:0},
+  {q:"蝙蝠會飛但身上有毛髮、用母乳餵養幼兒、用肺呼吸。它是哪一類？", options:["鳥類","昆蟲類","哺乳類"], answer:2},
+  {q:"海豚住在海裡用鰭游動，但用母乳餵養幼兒、用肺呼吸。它不是魚類，而是哪一類？", options:["魚類","哺乳類","兩棲類"], answer:1},
+  {q:"海龜有殼、皮膚乾燥、有鱗片、用肺呼吸。即使生活在海裡，它仍是哪一類？", options:["魚類","兩棲類","爬行類"], answer:2},
+  {q:"蜜蜂有三對腳、身體分頭胸腹三部分、有一對觸角、部分有翅膀。它是哪一類？", options:["昆蟲類","鳥類","兩棲類"], answer:0},
+  {q:"猴子有毛髮、用母乳餵養幼兒、用肺呼吸。它是哪一類？", options:["哺乳類","爬行類","鳥類"], answer:0},
+  {q:"蠑螈皮膚濕潤、無鱗片、成長後用肺和皮膚呼吸。它是哪一類？", options:["兩棲類","爬行類","魚類"], answer:0},
+  {q:"所有爬行類都有四隻腳。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"蛇是爬行類但沒有腳。"},
+  {q:"哺乳類都會生幼崽並以母乳餵養。", options:["正確 ✓","錯誤 ✗"], answer:0},
+  {q:"魚類用肺呼吸。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"魚類用鰓呼吸。"},
+  {q:"昆蟲都一定有兩對翅膀。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"並非所有昆蟲都有翅膀。"},
+  {q:"兩棲類的皮膚像爬行類一樣乾燥且有鱗片。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"兩棲類皮膚濕潤、無鱗片。"},
+  {q:"海藻是有花植物。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"海藻不是有花植物；苔蘚/蕨類/松柏才是無花植物例子。"},
+  {q:"蕨類以孢子繁殖。", options:["正確 ✓","錯誤 ✗"], answer:0},
+  {q:"松樹開花後才結出種子。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"松柏類是裸子植物，無真正花朵，種子生在球果內。"},
+  {q:"睡蓮是陸生植物。", options:["正確 ✓","錯誤 ✗"], answer:1, explanation:"睡蓮是水生植物。"},
+  {q:"鳳凰木是陸生植物。", options:["正確 ✓","錯誤 ✗"], answer:0}
+];
+
+let currentQ = 0, score = 0, lives = 3, answered = false;
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  currentQ = 0; score = 0; lives = 3;
+  updateStats(); showQuestion();
+}
+
+function updateStats() {
+  let h = ''; for(let i=0;i<lives;i++) h+='❤️'; for(let i=lives;i<3;i++) h+='🖤';
+  document.getElementById('hearts').textContent = h;
+  document.getElementById('scoreDisplay').textContent = '分數: '+score;
+  document.getElementById('qCounter').textContent = (currentQ+1)+' / '+questions.length;
+}
+
+function showQuestion() {
+  answered = false;
+  const q = questions[currentQ];
+  document.getElementById('questionText').textContent = q.q;
+  const c = document.getElementById('optionsContainer'); c.innerHTML = '';
+  q.options.forEach((opt,i) => {
+    const b = document.createElement('button');
+    b.className = 'option-btn'; b.textContent = opt;
+    b.onclick = () => selectAnswer(i); c.appendChild(b);
+  });
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('nextBtn').className = 'next-btn';
+}
+
+function selectAnswer(idx) {
+  if(answered) return; answered = true;
+  const q = questions[currentQ];
+  const buttons = document.querySelectorAll('.option-btn');
+  const fb = document.getElementById('feedback');
+  buttons.forEach(b => b.disabled = true);
+  if(idx === q.answer) {
+    buttons[idx].classList.add('correct');
+    score += 10;
+    fb.textContent = '✅ 正確！+10分';
+    fb.className = 'feedback correct-fb show';
+  } else {
+    buttons[idx].classList.add('wrong');
+    buttons[q.answer].classList.add('correct');
+    lives--; score = Math.max(0, score-5);
+    fb.textContent = '❌ 錯誤！-5分（剩餘生命: '+lives+'）';
+    fb.className = 'feedback wrong-fb show';
+    if(q.explanation) fb.textContent += ' — '+q.explanation;
+  }
+  updateStats();
+  if(lives <= 0) { setTimeout(showResult, 1500); }
+  else if(currentQ >= questions.length-1) { setTimeout(showResult, 1500); }
+  else { document.getElementById('nextBtn').className = 'next-btn show'; }
+}
+
+function nextQuestion() { currentQ++; showQuestion(); }
+
+function showResult() {
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('resultScreen').className = 'result-screen show';
+  const pct = Math.round(score / (questions.length*10)*100);
+  let stars = '', msg = '';
+  if(pct >= 90) { stars='⭐⭐⭐'; msg='太厲害了！你是生物分類大師！'; }
+  else if(pct >= 70) { stars='⭐⭐'; msg='做得好！繼續加油！'; }
+  else if(pct >= 50) { stars='⭐'; msg='不錯哦！再多練習就會更好！'; }
+  else { stars='💪'; msg='不要放棄！溫習完再試一次吧！'; }
+  document.getElementById('starsDisplay').textContent = stars;
+  document.getElementById('finalScore').textContent = score + ' / ' + (questions.length*10) + ' 分';
+  document.getElementById('resultMessage').textContent = msg;
+}
+
+function restartGame() {
+  document.getElementById('resultScreen').className = 'result-screen';
+  document.getElementById('startScreen').style.display = 'block';
+}
+</script>
+</body>
+</html>
