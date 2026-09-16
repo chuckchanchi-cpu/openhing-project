@@ -27,10 +27,15 @@ st.caption("AI 做初批（快），你做最終把關（準）— 跟 Openhing�
 
 # ===== API 配置（env-first，Streamlit Secrets 自動注入）=====
 def get_api_config():
-    """從環境變數/Secrets 攞 API 設定，支援多種 provider"""
+    """從環境變數/Secrets 攞 API 設定，支援多種 provider + 兼容舊設定名"""
     base = os.environ.get("OPENAI_API_BASE", "").rstrip("/")
-    key = os.environ.get("OPENAI_API_KEY", "")
-    model = os.environ.get("OPENAI_MODEL_NAME", "deepseek-chat")
+    key = os.environ.get("OPENAI_API_KEY", "") or os.environ.get("SILRA_API_KEY", "")
+    model = os.environ.get("OPENAI_MODEL_NAME", "") or os.environ.get("MODEL_NAME", "deepseek-chat")
+    # 兼容 SILRA_API_URL 格式（https://api.silra.cn/v1/chat/completions）
+    if not base:
+        silra_url = os.environ.get("SILRA_API_URL", "")
+        if silra_url:
+            base = silra_url.replace("/chat/completions", "").rstrip("/")
     # 如果冇 set base，預設 DeepSeek 官方
     if not base:
         base = "https://api.deepseek.com"
