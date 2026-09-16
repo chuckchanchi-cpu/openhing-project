@@ -11,6 +11,24 @@ SILRA_API_URL = "https://api.silra.cn/v1/chat/completions"
 SILRA_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-HfiuPr1xWenSQUsB5x0PPtHW3gVYN9MBUXTVQ67orNPED24y")
 MODEL = "deepseek-chat"
 
+# 各科目預設 rubric（發布/下載共用）
+RUBRIC_DEFAULT = {
+    "中文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 用詞（Vocabulary）：用詞豐富\n- 標點（Punctuation）：標點正確",
+    "常識": "- 內容準確性（Accuracy）：答案正確、冇事實錯誤\n- 解釋清晰度（Clarity）：解釋有邏輯、有因果關係\n- 關鍵詞運用（Keywords）：有用到教材關鍵詞\n- 完整性（Completeness）：有答齊所有部分",
+    "英文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 文法（Grammar）：時態正確、句子完整\n- 創意（Creativity）：用詞豐富",
+    "數學": "- 步驟（Steps）：解題步驟清晰\n- 準確性（Accuracy）：計算正確\n- 解釋（Explanation）：有解釋點解用呢個方法\n- 格式（Format）：答案有寫單位",
+}
+RUBRIC_FALLBACK = "- 內容準確性（Accuracy）：答案正確\n- 解釋清晰度（Clarity）：解釋清楚\n- 完整性（Completeness）：有答齊\n- 創意（Creativity）：有自己嘅諗法"
+
+def to_practice_format(q, subject):
+    """將生成器題目 dict 轉做練習平台格式"""
+    return {
+        "q": q.get('question') or q.get('title', ''),
+        "hint": q.get('tip', ''),
+        "rubric": RUBRIC_DEFAULT.get(subject, RUBRIC_FALLBACK),
+        "answer": q.get('reference_answer', ''),
+    }
+
 def generate_questions(subject, grade, topic, count=5):
     """Generate practice questions using AI"""
     try:
@@ -246,22 +264,12 @@ if st.session_state.generated_questions:
             if not to_publish:
                 to_publish = st.session_state.generated_questions
             # 轉換做練習平台格式（q/hint/rubric/answer）
-            RUBRIC_DEFAULT = {
-                "中文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 用詞（Vocabulary）：用詞豐富\n- 標點（Punctuation）：標點正確",
-                "常識": "- 內容準確性（Accuracy）：答案正確、冇事實錯誤\n- 解釋清晰度（Clarity）：解釋有邏輯、有因果關係\n- 關鍵詞運用（Keywords）：有用到教材關鍵詞\n- 完整性（Completeness）：有答齊所有部分",
-                "英文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 文法（Grammar）：時態正確、句子完整\n- 創意（Creativity）：用詞豐富",
-                "數學": "- 步驟（Steps）：解題步驟清晰\n- 準確性（Accuracy）：計算正確\n- 解釋（Explanation）：有解釋點解用呢個方法\n- 格式（Format）：答案有寫單位",
-            }
-            rubric = RUBRIC_DEFAULT.get(subject, "- 內容準確性（Accuracy）：答案正確\n- 解釋清晰度（Clarity）：解釋清楚\n- 完整性（Completeness）：有答齊\n- 創意（Creativity）：有自己嘅諗法")
             pending = []
             for q in to_publish:
-                pending.append({
-                    "q": q.get('question') or q.get('title', ''),
-                    "hint": q.get('tip', ''),
-                    "rubric": rubric,
-                    "answer": q.get('reference_answer', ''),
-                    "source": f"AI 生成（{subject} {grade} {topic or ''}）"
-                })
+                p = to_practice_format(q, subject)
+                if p["q"]:
+                    p["source"] = f"AI 生成（{subject} {grade} {topic or ''}）"
+                    pending.append(p)
             if "pending_questions" not in st.session_state:
                 st.session_state.pending_questions = []
             existing_q = {x.get("q") for x in st.session_state.pending_questions}
@@ -278,6 +286,23 @@ if st.session_state.generated_questions:
                 st.balloons()
             else:
                 st.info("呢批題目已經發布過，冇重複加入")
+
+    # 永久保存：下載 JSON 俾 Openclaw commit 入題目庫
+    with st.expander("💾 永久保存（下載 JSON 俾 Openclaw commit 入 resources/questions/）"):
+        payload_qs = [to_practice_format(q, subject) for q in st.session_state.generated_questions if (q.get('question') or q.get('title'))]
+        payload = json.dumps({
+            "subject": f"🆕 {subject}（AI 生成）",
+            "source": f"AI 生成（{subject} {grade} {topic or ''}）— {datetime.now().strftime('%Y-%m-%d')}",
+            "questions": payload_qs
+        }, ensure_ascii=False, indent=2)
+        st.download_button(
+            "⬇️ 下載題目 JSON",
+            payload,
+            f"questions_{subject}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            "application/json",
+            use_container_width=True
+        )
+        st.caption("下載後將個 JSON 檔案 send 俾 Openclaw，佢會 commit 入題目庫 → 所有學生永久見到")
 
 # Footer
 st.markdown("---")
