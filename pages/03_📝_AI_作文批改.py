@@ -86,6 +86,26 @@ def grade_essay(text, rubric, api_base, api_key, model):
     except Exception as e:
         return None, f"Error: {str(e)}"
 
+# ===== Rubric 預設（按科目）=====
+RUBRIC_PRESETS = {
+    "📕 英文作文": """- 內容（Content）：主題相關、有細節、有個人想法
+- 結構（Structure）：有開頭/中間/結尾、句子流暢
+- 文法（Grammar）：時態正確、句子完整、標點正確
+- 創意（Creativity）：用詞豐富、有想像力""",
+    "🌍 常識科長問題": """- 內容準確性（Accuracy）：答案正確、冇事實錯誤
+- 解釋清晰度（Clarity）：解釋有邏輯、有因果關係、人哋睇得明
+- 關鍵詞運用（Keywords）：有用到課堂教嘅關鍵詞/概念
+- 完整性（Completeness）：有答齊問題所有部分、有例子""",
+    "📗 中文作文": """- 內容（內容）：主題相關、有細節、有個人感受
+- 結構（結構）：有開頭/經過/結尾、段落分明
+- 用詞（用詞）：詞彙豐富、有適當成語/修辭
+- 標點與字詞（標點與字詞）：標點正確、冇錯別字""",
+    "🔢 數學解題": """- 步驟（Steps）：解題步驟清晰、完整
+- 準確性（Accuracy）：計算正確、答案正確
+- 解釋（Explanation）：有解釋點解用呢個方法
+- 單位與格式（Format）：有寫單位、格式正確""",
+}
+
 # ===== Sidebar：設定 =====
 with st.sidebar:
     st.header("⚙️ 設定")
@@ -95,11 +115,8 @@ with st.sidebar:
         st.warning("⚠️ 未偵測到 API key — 請喺 Streamlit Cloud Secrets 設定 `OPENAI_API_KEY`，或者本地用 .env")
     
     st.subheader("📋 評分準則（Rubric）")
-    default_rubric = """- 內容（Content）：主題相關、有細節、有個人想法
-- 結構（Structure）：有開頭/中間/結尾、句子流暢
-- 文法（Grammar）：時態正確、句子完整、標點正確
-- 創意（Creativity）：用詞豐富、有想像力"""
-    rubric = st.text_area("Rubric（每項 0-10 分）", default_rubric, height=150)
+    subject_key = st.selectbox("科目", list(RUBRIC_PRESETS.keys()))
+    rubric = st.text_area("Rubric（每項 0-10 分）", RUBRIC_PRESETS[subject_key], height=150, key=f"rubric_{subject_key}")
     
     st.subheader("📊 輸出選項")
     show_detail = st.checkbox("顯示詳細評語", value=True)
