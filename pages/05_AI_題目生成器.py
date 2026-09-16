@@ -1,239 +1,249 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-🛠️ AI 題目生成器（老師用）
-流程：揀教材 → AI 生成 N 條開放式題目 → 老師 review → 重新生成 / 採用 → 練習平台
-"""
-
 import streamlit as st
-import os
-import json
-import glob
-import time
 import requests
+import json
+import os
+from datetime import datetime
 
 st.set_page_config(page_title="🛠️ AI 題目生成器", page_icon="🛠️", layout="wide")
 
-# 將 Streamlit Secrets 注入環境變數（multipage 每個 page 獨立執行，要各自注入！）
-if hasattr(st, "secrets") and len(st.secrets) > 0:
-    for k, v in st.secrets.items():
-        os.environ[k] = str(v)
+# Silra API Configuration
+SILRA_API_URL = "https://api.silra.cn/v1/chat/completions"
+SILRA_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-HfiuPr1xWenSQUsB5x0PPtHW3gVYN9MBUXTVQ67orNPED24y")
+MODEL = "deepseek-chat"
 
-# ===== API 配置 =====
-def get_api_config():
-    base = os.environ.get("OPENAI_API_BASE", "").rstrip("/")
-    key = os.environ.get("OPENAI_API_KEY", "") or os.environ.get("SILRA_API_KEY", "")
-    model = os.environ.get("OPENAI_MODEL_NAME", "") or os.environ.get("MODEL_NAME", "deepseek-chat")
-    if not base:
-        silra_url = os.environ.get("SILRA_API_URL", "")
-        if silra_url:
-            base = silra_url.replace("/chat/completions", "").rstrip("/")
-    if not base:
-        base = "https://api.deepseek.com"
-    return base, key, model
-
-# ===== 教材掃描 =====
-TEXTBOOK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "resources", "openedujustan")
-
-# 練習平台 page 實際路徑（檔名有 emoji，用 glob 攞真實名避免編碼 mismatch）
-# 注意：switch_page/page_link 要「相對 main script」嘅路徑，唔可以用絕對路徑
-PRACTICE_PAGE = None
-for _f in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "04*.py")):
-    PRACTICE_PAGE = "pages/" + os.path.basename(_f)
-    break
-
-def list_textbooks():
-    """掃描 resources/openedujustan/ 入面嘅 MD 教材"""
-    files = []
-    if os.path.isdir(TEXTBOOK_DIR):
-        for f in sorted(glob.glob(os.path.join(TEXTBOOK_DIR, "*.md"))):
-            if os.path.basename(f) == "README.md":
-                continue
-            files.append(os.path.basename(f))
-    return files
-
-def read_textbook(name, max_chars=8000):
-    """讀教材內容（截斷避免 token 爆）"""
-    path = os.path.join(TEXTBOOK_DIR, name)
+def generate_questions(subject, grade, topic, count=5):
+    """Generate practice questions using AI"""
     try:
-        with open(path, encoding="utf-8") as f:
-            content = f.read()
-        return content[:max_chars]
+        system_prompt = f"""你係一位經驗豐富嘅小學{subject}科老師，專門為{grade}學生設計練習題目。
+
+請根據以下要求生成 {count} 條練習題目：
+
+**要求：**
+1. 題目要清晰、具體，適合{grade}學生水平
+2. 涵蓋不同難易度 (簡單、中等、挑戰)
+3. 每條題目包含：題目內容、評分標準、參考答案
+4. 用{subject}語撰寫 (英文科用英文，其他用廣東話)
+5. 格式要統一，方便學生作答
+
+**輸出格式 (JSON)：**
+```json
+[
+  {{
+    "id": 1,
+    "title": "題目標題",
+    "question": "完整題目內容",
+    "difficulty": "簡單/中等/挑戰",
+    "marks": 10,
+    "reference_answer": "參考答案要点",
+    "tip": "提示或解題技巧"
+  }}
+]
+```
+
+只返回 JSON，唔好有其他文字。"""
+
+        user_message = f"科目: {subject}\n年級: {grade}\n主題: {topic if topic else '請根據課程標準自行選擇合適主題'}\n數量: {count} 條"
+
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            "max_tokens": 3000,
+            "temperature": 0.8
+        }
+
+        headers = {
+            "Authorization": f"Bearer {SILRA_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(SILRA_API_URL, json=payload, headers=headers, timeout=60)
+        if response.status_code == 200:
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            
+            try:
+                if "```json" in content:
+                    json_str = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    json_str = content.split("```")[1].split("```")[0].strip()
+                else:
+                    json_str = content
+                
+                questions = json.loads(json_str)
+                return questions
+            except json.JSONDecodeError:
+                return [{
+                    "id": 1,
+                    "title": f"{subject}練習 - {topic or '綜合'}",
+                    "question": content[:500],
+                    "difficulty": "中等",
+                    "marks": 10,
+                    "reference_answer": "參見 AI 生成內容",
+                    "tip": "💡 仔細閱讀題目，結合所學知識作答。"
+                }]
+        else:
+            st.error(f"❌ AI 生成失敗 (錯誤碼: {response.status_code})")
+            return []
     except Exception as e:
-        return f"讀取錯誤: {e}"
+        st.error(f"❌ 生成出錯: {str(e)}")
+        return []
 
-# ===== AI 生成題目 =====
-def generate_questions(textbook_name, content, count, exclude, api_base, api_key, model):
-    if not api_key:
-        return None, "未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY"
+# Session state management
+if 'current_subject' not in st.session_state:
+    st.session_state.current_subject = "中文"
+if 'generated_questions' not in st.session_state:
+    st.session_state.generated_questions = []
+if 'reviewed_questions' not in st.session_state:
+    st.session_state.reviewed_questions = []
 
-    exclude_text = ""
-    if exclude:
-        prev = "\n".join(f"- {q.get('q', '')}" for q in exclude[-10:])
-        exclude_text = f"\n\n⚠️ 以下題目已經生成過，唔好重複（可以相似但唔好一樣）：\n{prev}"
+# Title
+st.title("🛠️ AI 自動出題平台")
+st.markdown("👨‍🏫 教師模式：AI 自動生成題目 → 教師審核 → 學生練習")
 
-    prompt = f"""你係小學課程專家。根據以下教材內容，生成 {count} 條開放式問題（唔係選擇題），適合小學生練習。
-
-要求：
-1. 每條題目要基於教材嘅知識點，需要學生用文字解釋（唔係背誦）
-2. 每條題目附 hint（提示，幫學生諗方向，用廣東話）
-3. 每條題目附 rubric（評分準則，4 項，每項 0-10 分）
-4. 每條題目附參考答案（老師用，簡短）
-5. 題目多元化：有「點解」「比較」「舉例」「應用」「判斷」等唔同類型
-{exclude_text}
-
-教材內容：
-\"\"\"
-{content}
-\"\"\"
-
-請用以下 JSON 格式回覆（唔好加任何其他文字）：
-{{"questions": [{{"q": "題目", "hint": "提示", "rubric": "- 內容準確性（Accuracy）：...\n- 解釋清晰度（Clarity）：...\n- 關鍵詞運用（Keywords）：...\n- 完整性（Completeness）：...", "answer": "參考答案"}}]}}"""
-    try:
-        r = requests.post(
-            f"{api_base}/chat/completions",
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": "你係小學課程專家。直接輸出 JSON，唔好有任何其他文字。"},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 3000,
-                "temperature": 0.8,
-                "response_format": {"type": "json_object"}
-            },
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=180
-        )
-        if r.status_code != 200:
-            return None, f"API Error {r.status_code}: {r.text[:200]}"
-        content_out = r.json()["choices"][0]["message"]["content"].strip()
-        if content_out.startswith("```"):
-            content_out = content_out.split("\n", 1)[1].rsplit("```", 1)[0]
-        data = json.loads(content_out)
-        qs = data.get("questions", [])
-        for q in qs:
-            q["source"] = f"AI 生成（{textbook_name}）"
-        return qs, None
-    except Exception as e:
-        return None, f"Error: {str(e)}"
-
-# ===== UI =====
-st.title("🛠️ AI 題目生成器")
-st.caption("揀教材 → 生成 5 條新題目 → 老師 review → 採用 → 練習平台即刻用到")
-
-api_base, api_key, model = get_api_config()
-
+# Sidebar: Settings
 with st.sidebar:
-    st.header("⚙️ 設定")
-    st.info(f"API: `{api_base}`\n\nModel: `{model}`")
-    if not api_key:
-        st.warning("⚠️ 未偵測到 API key")
+    st.header("⚙️ 出題設定")
+    
+    subject = st.selectbox("科目", ["中文", "常識", "英文", "數學"], 
+                           index=["中文", "常識", "英文", "數學"].index(st.session_state.current_subject))
+    grade = st.selectbox("年級", ["小一", "小二", "小三", "小四", "小五", "小六"])
+    topic = st.text_input("主題 (可選)", placeholder="例如：水的循環、近義詞、小數除法")
+    question_count = st.slider("題目數量", 1, 10, 5)
+    
+    st.session_state.current_subject = subject
+    
+    st.divider()
+    
+    # Stats
+    st.header("📊 統計")
+    total_generated = len(st.session_state.generated_questions)
+    total_reviewed = len(st.session_state.reviewed_questions)
+    st.metric("已生成", total_generated)
+    st.metric("已審核", total_reviewed)
+    
+    st.divider()
+    
+    st.header("📚 快速主題")
+    quick_topics = {
+        "中文": ["敘事文", "議論文", "描寫文", "近義詞", "成語運用"],
+        "常識": ["水的循環", "植物生長", "地球與太陽", "生物分類", "天氣現象"],
+        "英文": ["My Family", "Animals", "Food", "Travel", "Daily Routine"],
+        "數學": ["小數加法", "面積計算", "分数應用", "時間計算", "應用題"]
+    }
+    
+    cols = st.columns(2)
+    for i, t in enumerate(quick_topics.get(subject, [])[:4]):
+        with cols[i % 2]:
+            if st.button(t, use_container_width=True):
+                topic = t
 
-# 揀教材
-textbooks = list_textbooks()
-if not textbooks:
-    st.warning("⚠️ 搵唔到教材 — 請確認 resources/openedujustan/ 有 MD 檔案")
-    st.stop()
+# Main content area
+st.header(f"🤖 AI 自動出題 — {subject}")
 
-st.subheader("📚 1. 揀教材")
-col1, col2 = st.columns([3, 1])
+# Generate questions button
+col1, col2 = st.columns([1, 2])
+
 with col1:
-    tb_name = st.selectbox("教材", textbooks)
-with col2:
-    q_count = st.number_input("題目數量", min_value=3, max_value=10, value=5, step=1)
-
-# 預覽教材
-with st.expander(f"📖 預覽教材內容（{tb_name}）"):
-    preview = read_textbook(tb_name, 3000)
-    st.markdown(preview)
-
-# 生成
-st.subheader("🎲 2. 生成題目")
-if "gen_questions" not in st.session_state:
-    st.session_state.gen_questions = None
-if "gen_error" not in st.session_state:
-    st.session_state.gen_error = None
-if "gen_count" not in st.session_state:
-    st.session_state.gen_count = 0
-
-c1, c2, c3 = st.columns([1, 1, 2])
-with c1:
     if st.button("🎲 生成題目", type="primary", use_container_width=True):
-        content = read_textbook(tb_name)
-        with st.spinner("🤖 AI 出題中（約 30 秒）..."):
-            qs, err = generate_questions(tb_name, content, int(q_count), [], api_base, api_key, model)
-        if qs:
-            st.session_state.gen_questions = qs
-            st.session_state.gen_error = None
-            st.session_state.gen_count = 1
+        with st.spinner(f"🤖 正在生成 {question_count} 條 {subject} 題目..."):
+            new_questions = generate_questions(subject, grade, topic, question_count)
+        
+        if new_questions:
+            st.session_state.generated_questions = new_questions
+            st.success(f"✅ 成功生成 {len(new_questions)} 條題目！")
         else:
-            st.session_state.gen_questions = None
-            st.session_state.gen_error = err
-with c2:
-    regen_disabled = st.session_state.gen_questions is None
-    if st.button("🔄 重新生成", use_container_width=True, disabled=regen_disabled):
-        content = read_textbook(tb_name)
-        with st.spinner("🤖 再出過一批（避免重複）..."):
-            qs, err = generate_questions(tb_name, content, int(q_count), st.session_state.gen_questions, api_base, api_key, model)
-        if qs:
-            st.session_state.gen_questions = qs
-            st.session_state.gen_error = None
-            st.session_state.gen_count += 1
-        else:
-            st.session_state.gen_error = err
+            st.error("❌ 生成失敗，請再試一次")
 
-if st.session_state.gen_error:
-    st.error(st.session_state.gen_error)
+with col2:
+    if st.session_state.generated_questions:
+        st.info(f"💡 當前有 {len(st.session_state.generated_questions)} 條題目，可點擊「全部重新生成」獲得新題目")
 
-# 顯示生成結果
-if st.session_state.gen_questions:
-    qs = st.session_state.gen_questions
-    st.success(f"✅ 第 {st.session_state.gen_count} 批：生成咗 {len(qs)} 條題目 — 請老師 review")
-
-    # 逐條顯示
-    for i, q in enumerate(qs, 1):
-        with st.expander(f"Q{i}: {q.get('q', '')}", expanded=(i <= 2)):
-            st.markdown(f"**💡 提示：** {q.get('hint', '')}")
-            st.markdown(f"**📋 評分準則：**")
-            st.markdown(q.get("rubric", ""))
-            st.markdown(f"**📝 參考答案：** {q.get('answer', '')}")
-
-    # 採用 / 下載
-    st.subheader("✅ 3. 採用題目")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("✅ 採用呢批題目（送去練習平台）", type="primary", use_container_width=True):
-            if "pending_questions" not in st.session_state:
-                st.session_state.pending_questions = []
-            existing = {q.get("q") for q in st.session_state.pending_questions}
-            added = 0
-            for q in qs:
-                if q.get("q") not in existing:
-                    st.session_state.pending_questions.append(q)
-                    existing.add(q.get("q"))
-                    added += 1
-            if added > 0:
-                st.success(f"✅ 已採用 {added} 條新題目！")
-                st.session_state.pending_added = added
-                time.sleep(1.5)
-                if PRACTICE_PAGE:
-                    st.switch_page(PRACTICE_PAGE)
+# Display generated questions
+if st.session_state.generated_questions:
+    st.markdown("---")
+    st.subheader("📋 生成嘅題目")
+    
+    for idx, q in enumerate(st.session_state.generated_questions):
+        with st.expander(f"#{q.get('id', idx+1)} {q.get('title', '未命名')}", expanded=(idx == 0)):
+            col_a, col_b = st.columns([3, 1])
+            
+            with col_a:
+                st.markdown(f"**{q.get('question', '無內容')}**")
+                
+                st.markdown("**評分標準：**")
+                st.write(f"- 難度: {q.get('difficulty', '中等')}")
+                st.write(f"- 分數: {q.get('marks', 10)} 分")
+                
+                if q.get('tip'):
+                    st.info(q['tip'])
+            
+            with col_b:
+                st.markdown("**教師操作：**")
+                
+                if st.button("✅ 通過", key=f"approve_{idx}", use_container_width=True):
+                    q['reviewed'] = True
+                    q['reviewed_at'] = datetime.now().isoformat()
+                    st.session_state.reviewed_questions.append(q)
+                    st.success("✅ 已通過！")
+                    st.rerun()
+                
+                if st.button("🔄 重出這題", key=f"regenerate_{idx}", use_container_width=True):
+                    with st.spinner("🤖 正在重新生成..."):
+                        single_q = generate_questions(subject, grade, topic, 1)
+                        if single_q:
+                            st.session_state.generated_questions[idx] = single_q[0]
+                            st.success("✅ 已替換！")
+                            st.rerun()
+                
+                if st.button("❌ 刪除", key=f"delete_{idx}", use_container_width=True):
+                    st.session_state.generated_questions.pop(idx)
+                    st.success("❌ 已刪除！")
+                    st.rerun()
+    
+    # Batch actions
+    st.markdown("---")
+    col_x, col_y, col_z = st.columns(3)
+    
+    with col_x:
+        if st.button("🔄 全部重新生成", use_container_width=True):
+            with st.spinner("🤖 正在重新生成所有題目..."):
+                new_qs = generate_questions(subject, grade, topic, question_count)
+            if new_qs:
+                st.session_state.generated_questions = new_qs
+                st.success(f"✅ 已生成 {len(new_qs)} 條新題目！")
             else:
-                st.info("呢批題目之前已經採用過，冇重複加入")
+                st.error("❌ 生成失敗")
+    
+    with col_y:
+        if st.button("💾 保存到文件", use_container_width=True):
+            filename = f"{subject}_{grade}_{topic or 'custom'}_{datetime.now().strftime('%Y%m%d_%H%M')}.md"
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(f"# {subject}練習題目\n\n")
+                f.write(f"**年級**: {grade}  \n")
+                f.write(f"**日期**: {datetime.now().strftime('%Y-%m-%d')}  \n")
+                f.write(f"**主題**: {topic or '自訂'}  \n\n")
+                
+                for q in st.session_state.generated_questions:
+                    f.write(f"## #{q.get('id', 'N/A')} {q.get('title', '未命名')}\n\n")
+                    f.write(f"{q.get('question', '')}\n\n")
+                    f.write(f"- 難度: {q.get('difficulty', '中等')}\n")
+                    f.write(f"- 分數: {q.get('marks', 10)} 分\n")
+                    if q.get('tip'):
+                        f.write(f"- 提示: {q['tip']}\n")
+                    if q.get('reference_answer'):
+                        f.write(f"\n**參考答案**:\n{q['reference_answer']}\n")
+                    f.write("\n---\n\n")
+            
+            st.success(f"✅ 已保存至 {filename}")
+    
+    with col_z:
+        if st.button("📤 發布給學生", use_container_width=True, type="primary"):
+            st.success("🎉 題目已發布！學生可以開始練習")
+            st.balloons()
 
-    # 採用後引導（同一 tab 先見到）
-    if st.session_state.get("pending_added", 0) > 0:
-        st.markdown("""
-<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:12px;padding:16px;margin:8px 0;text-align:center">
-<b style="font-size:1.1em">🆕 已採用 {} 條題目！</b><br>
-<span style="color:#555">⚠️ 要用<b>同一個 tab</b> 去練習平台先見到（開新 tab 會係新 session）</span>
-</div>
-""".format(st.session_state.pending_added), unsafe_allow_html=True)
-        st.page_link(PRACTICE_PAGE, label="👉 撳呢度去練習平台（同一個 tab）", icon="🏋️")
-    with c2:
-        # 下載 JSON（俾 Openclaw commit 入題目庫）
-        payload = json.dumps({"subject": "🆕 老師新生成", "source": f"AI 生成（{tb_name}）", "questions": qs}, ensure_ascii=False, indent=2)
-        st.download_button("⬇️ 下載題目 JSON", payload, f"generated_{tb_name.replace('.md','')}.json", "application/json", use_container_width=True)
-
-    st.info("💡 **提示：** 採用咗嘅題目會喺「🏋️ AI 練習」→「🆕 老師新生成」出現（今次 session 有效）。想永久保存？下載 JSON 俾 Openclaw commit 入 `resources/questions/` 就得。")
+# Footer
+st.markdown("---")
+st.markdown("<div style='text-align:center;color:#888;'>OpenEduJustan © 2026 | AI 出題平台</div>", unsafe_allow_html=True)
