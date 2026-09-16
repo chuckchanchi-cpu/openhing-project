@@ -35,6 +35,12 @@ def get_api_config():
 # ===== 教材掃描 =====
 TEXTBOOK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "resources", "openedujustan")
 
+# 練習平台 page 實際路徑（檔名有 emoji，用 glob 攞真實名避免編碼 mismatch）
+PRACTICE_PAGE = None
+for _f in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "04*.py")):
+    PRACTICE_PAGE = _f
+    break
+
 def list_textbooks():
     """掃描 resources/openedujustan/ 入面嘅 MD 教材"""
     files = []
@@ -210,7 +216,8 @@ if st.session_state.gen_questions:
                 st.success(f"✅ 已採用 {added} 條新題目！")
                 st.session_state.pending_added = added
                 time.sleep(1.5)
-                st.switch_page("pages/04_🏋️_AI_練習.py")
+                if PRACTICE_PAGE:
+                    st.switch_page(PRACTICE_PAGE)
             else:
                 st.info("呢批題目之前已經採用過，冇重複加入")
 
@@ -222,7 +229,7 @@ if st.session_state.gen_questions:
 <span style="color:#555">⚠️ 要用<b>同一個 tab</b> 去練習平台先見到（開新 tab 會係新 session）</span>
 </div>
 """.format(st.session_state.pending_added), unsafe_allow_html=True)
-        st.page_link("pages/04_🏋️_AI_練習.py", label="👉 撳呢度去練習平台（同一個 tab）", icon="🏋️")
+        st.page_link(PRACTICE_PAGE, label="👉 撳呢度去練習平台（同一個 tab）", icon="🏋️")
     with c2:
         # 下載 JSON（俾 Openclaw commit 入題目庫）
         payload = json.dumps({"subject": "🆕 老師新生成", "source": f"AI 生成（{tb_name}）", "questions": qs}, ensure_ascii=False, indent=2)
