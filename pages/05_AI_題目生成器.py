@@ -321,28 +321,6 @@ def render_generator():
             material_path = os.path.join(material_dir, material_choice)
             st.caption(f"✅ 已揀：`{material_choice}`")
 
-        st.divider()
-
-        st.header("📊 統計")
-        st.metric("已生成", len(st.session_state.generated_questions))
-        st.metric("已審核", len(st.session_state.reviewed_questions))
-
-        st.divider()
-
-        st.header("📚 快速主題")
-        quick_topics = {
-            "中文": ["敘事文", "議論文", "描寫文", "近義詞", "成語運用"],
-            "常識": ["水的循環", "植物生長", "地球與太陽", "生物分類", "天氣現象"],
-            "英文": ["My Family", "Animals", "Food", "Travel", "Daily Routine"],
-            "數學": ["小數加法", "面積計算", "分数應用", "時間計算", "應用題"]
-        }
-
-        cols = st.columns(2)
-        for i, t in enumerate(quick_topics.get(subject, [])[:4]):
-            with cols[i % 2]:
-                if st.button(t, use_container_width=True):
-                    topic = t
-
     # Main content area
     st.subheader(f"🤖 出題 — {subject}")
 
