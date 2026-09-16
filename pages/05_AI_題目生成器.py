@@ -141,16 +141,29 @@ def to_practice_format(q, subject):
         "answer": q.get('reference_answer', ''),
     }
 
-def generate_questions(subject, grade, topic, count=5):
+def generate_questions(subject, grade, topic, count=5, material_path=None):
     """Generate practice questions using AI"""
     api_base, api_key, model = get_api_config()
     if not api_key:
         st.error("⚠️ 未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY")
         return []
     try:
-        system_prompt = f"""你係一位經驗豐富嘅小學{subject}科老師，專門為{grade}學生設計練習題目。
+        # 教材 context（可選）— 出題跟教材內容
+        material_ctx = ""
+        if material_path and os.path.exists(material_path):
+            with open(material_path, encoding="utf-8") as f:
+                material_ctx = f.read()[:4000]
 
-請根據以下要求生成 {count} 條練習題目：
+        material_section = ""
+        if material_ctx.strip():
+            material_section = f"""
+**教材內容（題目必須根據呢份教材嚟出，用返教材嘅詞彙同概念）：**
+{material_ctx}
+"""
+
+        system_prompt = f"""你係一位經驗豐富嘅小學{subject}科老師，專門為{grade}學生設計練習題目。
+{material_section}
+請根據以上要求生成 {count} 條練習題目：
 
 **要求：**
 1. 題目要清晰、具體，適合{grade}學生水平
@@ -297,6 +310,19 @@ def render_generator():
 
         st.divider()
 
+        # 📖 教材選擇（openedujustan）
+        st.header("📖 教材 (可選)")
+        material_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "resources", "openedujustan")
+        material_files = sorted(glob.glob(os.path.join(material_dir, "*.md")))
+        material_names = ["（唔用教材 — AI 自由出題）"] + [os.path.basename(f) for f in material_files]
+        material_choice = st.selectbox("出題根據教材", material_names)
+        material_path = None
+        if material_choice != "（唔用教材 — AI 自由出題）":
+            material_path = os.path.join(material_dir, material_choice)
+            st.caption(f"✅ 已揀：`{material_choice}`")
+
+        st.divider()
+
         st.header("📊 統計")
         st.metric("已生成", len(st.session_state.generated_questions))
         st.metric("已審核", len(st.session_state.reviewed_questions))
@@ -325,7 +351,7 @@ def render_generator():
     with col1:
         if st.button("🎲 生成題目", type="primary", use_container_width=True):
             with st.spinner(f"🤖 正在生成 {question_count} 條 {subject} 題目..."):
-                new_questions = generate_questions(subject, grade, topic, question_count)
+                new_questions = generate_questions(subject, grade, topic, question_count, material_path)
 
             if new_questions:
                 st.session_state.generated_questions = new_questions
@@ -366,7 +392,7 @@ def render_generator():
 
                     if st.button("🔄 重出這題", key=f"regenerate_{idx}", use_container_width=True):
                         with st.spinner("🤖 正在重新生成..."):
-                            single_q = generate_questions(subject, grade, topic, 1)
+                            single_q = generate_questions(subject, grade, topic, 1, material_path)
                             if single_q:
                                 st.session_state.generated_questions[idx] = single_q[0]
                                 st.success("✅ 已替換！")
@@ -384,7 +410,7 @@ def render_generator():
         with col_x:
             if st.button("🔄 全部重新生成", use_container_width=True):
                 with st.spinner("🤖 正在重新生成所有題目..."):
-                    new_qs = generate_questions(subject, grade, topic, question_count)
+                    new_qs = generate_questions(subject, grade, topic, question_count, material_path)
                 if new_qs:
                     st.session_state.generated_questions = new_qs
                     st.success(f"✅ 已生成 {len(new_qs)} 條新題目！")
@@ -415,17 +441,19 @@ def render_generator():
 
         with col_z:
             if st.button("📤 發布給學生", use_container_width=True, type="primary"):
-                # 揀已通過嘅題目；冇通過過就全部發布
-                to_publish = [q for q in st.session_state.generated_questions if q.get('reviewed')]
-                if not to_publish:
-                    to_publish = st.session_state.generated_questions
+                # 發布全部生成嘅題目（通過與否都發布 — 老師可以之後用「重出/刪除」調整）
+                to_publish = st.session_state.generated_questions
+                reviewed_count = len([q for q in to_publish if q.get('reviewed')])
                 # 轉換做練習平台格式（q/hint/rubric/answer）
                 pending = []
+                skipped = 0
                 for q in to_publish:
                     p = to_practice_format(q, subject)
                     if p["q"]:
                         p["source"] = f"AI 生成（{subject} {grade} {topic or ''}）"
                         pending.append(p)
+                    else:
+                        skipped += 1
                 if "pending_questions" not in st.session_state:
                     st.session_state.pending_questions = []
                 existing_q = {x.get("q") for x in st.session_state.pending_questions}
@@ -437,7 +465,10 @@ def render_generator():
                         added += 1
                 if added > 0:
                     st.session_state.pending_added = added
-                    st.success(f"🎉 已發布 {added} 條題目去練習平台！")
+                    msg = f"🎉 已發布 {added} 條題目去練習平台！"
+                    if skipped:
+                        msg += f"（{skipped} 條格式不完整被跳過 — 可以撳「🔄 重出這題」）"
+                    st.success(msg)
                     st.info("👉 而家切去上面「🏋️ AI 練習平台」tab → 揀科目「🆕 老師新生成」→ 學生即刻做到！")
                     st.balloons()
                 else:
