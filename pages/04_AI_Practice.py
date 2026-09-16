@@ -240,21 +240,10 @@ with st.sidebar:
     st.header("👤 學生資料")
     student_name = st.text_input("你叫咩名？", key="sname")
 
-    st.header("📊 老師選項")
-    pending_count = len(st.session_state.get("pending_questions", []))
-    if pending_count > 0:
-        st.success(f"🆕 老師新生成：{pending_count} 條題目已加入（喺「揀題目」度揀「🆕 老師新生成」）")
-    if st.checkbox("顯示老師工具"):
-        if st.session_state.get("practice_log"):
-            df_log = pd.DataFrame(st.session_state.practice_log)
-            csv_out = io.StringIO()
-            df_log.to_csv(csv_out, index=False)
-            st.download_button("⬇️ 下載全班結果 CSV", csv_out.getvalue(), "practice_results.csv", "text/csv")
-
 # 揀科目 + 題目
 subject = st.selectbox("📚 揀科目", list(QUESTION_BANK.keys()))
 questions = QUESTION_BANK[subject]
-q_idx = st.radio("📝 揀題目", range(len(questions)), format_func=lambda i: questions[i]["q"][:40] + "...")
+q_idx = st.selectbox("📝 揀題目", range(len(questions)), format_func=lambda i: questions[i]["q"][:60] + "..." if len(questions[i]["q"]) > 60 else questions[i]["q"])
 
 question = questions[q_idx]
 st.divider()

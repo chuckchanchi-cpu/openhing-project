@@ -139,13 +139,9 @@ st.markdown("👨‍🏫 教師模式：AI 自動生成題目 → 教師審核 �
 with st.sidebar:
     st.header("⚙️ 出題設定")
     
-    subject = st.selectbox("科目", ["中文", "常識", "英文", "數學"], 
-                           index=["中文", "常識", "英文", "數學"].index(st.session_state.current_subject))
-    grade = st.selectbox("年級", ["小一", "小二", "小三", "小四", "小五", "小六"])
+    subject = st.selectbox("科目", ["中文", "常識", "英文", "數學"])
     topic = st.text_input("主題 (可選)", placeholder="例如：水的循環、近義詞、小數除法")
     question_count = st.slider("題目數量", 1, 10, 5)
-    
-    st.session_state.current_subject = subject
     
     st.divider()
     
@@ -155,22 +151,6 @@ with st.sidebar:
     total_reviewed = len(st.session_state.reviewed_questions)
     st.metric("已生成", total_generated)
     st.metric("已審核", total_reviewed)
-    
-    st.divider()
-    
-    st.header("📚 快速主題")
-    quick_topics = {
-        "中文": ["敘事文", "議論文", "描寫文", "近義詞", "成語運用"],
-        "常識": ["水的循環", "植物生長", "地球與太陽", "生物分類", "天氣現象"],
-        "英文": ["My Family", "Animals", "Food", "Travel", "Daily Routine"],
-        "數學": ["小數加法", "面積計算", "分数應用", "時間計算", "應用題"]
-    }
-    
-    cols = st.columns(2)
-    for i, t in enumerate(quick_topics.get(subject, [])[:4]):
-        with cols[i % 2]:
-            if st.button(t, use_container_width=True):
-                topic = t
 
 # Main content area
 st.header(f"🤖 AI 自動出題 — {subject}")
