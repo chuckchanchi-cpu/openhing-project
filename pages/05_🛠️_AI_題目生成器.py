@@ -207,12 +207,22 @@ if st.session_state.gen_questions:
                     existing.add(q.get("q"))
                     added += 1
             if added > 0:
-                st.success(f"✅ 已採用 {added} 條新題目！而家帶你去練習平台...")
+                st.success(f"✅ 已採用 {added} 條新題目！")
                 st.session_state.pending_added = added
                 time.sleep(1.5)
                 st.switch_page("pages/04_🏋️_AI_練習.py")
             else:
                 st.info("呢批題目之前已經採用過，冇重複加入")
+
+    # 採用後引導（同一 tab 先見到）
+    if st.session_state.get("pending_added", 0) > 0:
+        st.markdown("""
+<div style="background:#e8f5e9;border:2px solid #4caf50;border-radius:12px;padding:16px;margin:8px 0;text-align:center">
+<b style="font-size:1.1em">🆕 已採用 {} 條題目！</b><br>
+<span style="color:#555">⚠️ 要用<b>同一個 tab</b> 去練習平台先見到（開新 tab 會係新 session）</span>
+</div>
+""".format(st.session_state.pending_added), unsafe_allow_html=True)
+        st.page_link("pages/04_🏋️_AI_練習.py", label="👉 撳呢度去練習平台（同一個 tab）", icon="🏋️")
     with c2:
         # 下載 JSON（俾 Openclaw commit 入題目庫）
         payload = json.dumps({"subject": "🆕 老師新生成", "source": f"AI 生成（{tb_name}）", "questions": qs}, ensure_ascii=False, indent=2)
