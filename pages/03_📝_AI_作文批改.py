@@ -122,19 +122,22 @@ with tab1:
                 raise last_err
             st.success(f"✅ 讀到 {len(df)} 份回應")
             
-            # 揀作文欄位
-            text_cols = [c for c in df.columns if df[c].dtype == object]
-            essay_col = st.selectbox("邊一欄係作文答案？", text_cols)
-            name_col = st.selectbox("邊一欄係學生名？（可選）", ["（無）"] + text_cols)
+            if len(df) == 0:
+                st.warning("⚠️ CSV 冇任何回應資料 — 要學生提交咗先有得批改。如果你想測試，可以用下面「✍️ 直接貼文批改」分頁。")
+            
+            # 全部欄位都俾揀（唔限 dtype — 空欄會被 pandas 當做數字欄）
+            all_cols = list(df.columns)
+            essay_col = st.selectbox("邊一欄係作文答案？", all_cols)
+            name_col = st.selectbox("邊一欄係學生名？（可選）", ["（無）"] + all_cols)
             
             if st.button("🚀 開始 AI 批改", type="primary"):
                 results = []
                 progress = st.progress(0)
                 for i, row in df.iterrows():
-                    essay_text = str(row[essay_col]).strip()
+                    essay_text = str(row[essay_col]).strip() if pd.notna(row[essay_col]) else ""
                     if not essay_text or essay_text == "nan":
                         continue
-                    student = str(row[name_col]) if name_col != "（無）" else f"學生 {i+1}"
+                    student = str(row[name_col]).strip() if name_col != "（無）" and pd.notna(row[name_col]) else f"學生 {i+1}"
                     with st.spinner(f"批改緊 {student}..."):
                         result, err = grade_essay(essay_text, rubric, api_base, api_key, model)
                     if result:
