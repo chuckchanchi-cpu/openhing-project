@@ -17,6 +17,11 @@ import io
 
 st.set_page_config(page_title="📝 AI 作文批改", page_icon="📝", layout="wide")
 
+# 將 Streamlit Secrets 注入環境變數（multipage 每個 page 獨立執行，要各自注入！）
+if hasattr(st, "secrets") and len(st.secrets) > 0:
+    for k, v in st.secrets.items():
+        os.environ[k] = str(v)
+
 st.title("📝 AI 作文批改助手")
 st.caption("AI 做初批（快），你做最終把關（準）— 跟 Openhing「AI 增強人類」理念")
 
@@ -34,6 +39,8 @@ def get_api_config():
 # ===== 批改核心 =====
 def grade_essay(text, rubric, api_base, api_key, model):
     """用 LLM 批改一篇作文，返回 JSON 結果"""
+    if not api_key:
+        return None, "未偵測到 API key — 請喺 Streamlit Cloud → Settings → Secrets 設定 OPENAI_API_KEY"
     prompt = f"""你係一個專業英文老師。根據以下評分準則，批改學生嘅英文作文。
 
 評分準則（每項 0-10 分）：
