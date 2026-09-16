@@ -241,8 +241,43 @@ if st.session_state.generated_questions:
     
     with col_z:
         if st.button("📤 發布給學生", use_container_width=True, type="primary"):
-            st.success("🎉 題目已發布！學生可以開始練習")
-            st.balloons()
+            # 揀已通過嘅題目；冇通過過就全部發布
+            to_publish = [q for q in st.session_state.generated_questions if q.get('reviewed')]
+            if not to_publish:
+                to_publish = st.session_state.generated_questions
+            # 轉換做練習平台格式（q/hint/rubric/answer）
+            RUBRIC_DEFAULT = {
+                "中文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 用詞（Vocabulary）：用詞豐富\n- 標點（Punctuation）：標點正確",
+                "常識": "- 內容準確性（Accuracy）：答案正確、冇事實錯誤\n- 解釋清晰度（Clarity）：解釋有邏輯、有因果關係\n- 關鍵詞運用（Keywords）：有用到教材關鍵詞\n- 完整性（Completeness）：有答齊所有部分",
+                "英文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 文法（Grammar）：時態正確、句子完整\n- 創意（Creativity）：用詞豐富",
+                "數學": "- 步驟（Steps）：解題步驟清晰\n- 準確性（Accuracy）：計算正確\n- 解釋（Explanation）：有解釋點解用呢個方法\n- 格式（Format）：答案有寫單位",
+            }
+            rubric = RUBRIC_DEFAULT.get(subject, "- 內容準確性（Accuracy）：答案正確\n- 解釋清晰度（Clarity）：解釋清楚\n- 完整性（Completeness）：有答齊\n- 創意（Creativity）：有自己嘅諗法")
+            pending = []
+            for q in to_publish:
+                pending.append({
+                    "q": q.get('question') or q.get('title', ''),
+                    "hint": q.get('tip', ''),
+                    "rubric": rubric,
+                    "answer": q.get('reference_answer', ''),
+                    "source": f"AI 生成（{subject} {grade} {topic or ''}）"
+                })
+            if "pending_questions" not in st.session_state:
+                st.session_state.pending_questions = []
+            existing_q = {x.get("q") for x in st.session_state.pending_questions}
+            added = 0
+            for p in pending:
+                if p.get("q") and p["q"] not in existing_q:
+                    st.session_state.pending_questions.append(p)
+                    existing_q.add(p["q"])
+                    added += 1
+            if added > 0:
+                st.session_state.pending_added = added
+                st.success(f"🎉 已發布 {added} 條題目去練習平台！")
+                st.info("👉 撳左邊 sidebar「04_AI_練習平台」→ 揀科目「🆕 老師新生成」（⚠️ 用同一個 tab）")
+                st.balloons()
+            else:
+                st.info("呢批題目已經發布過，冇重複加入")
 
 # Footer
 st.markdown("---")
