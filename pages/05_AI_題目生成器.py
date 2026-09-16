@@ -512,19 +512,19 @@ def render_practice():
 
     # Sidebar
     with st.sidebar:
-        st.header("👤 學生資料")
-        student_name = st.text_input("你叫咩名？", key="sname")
-
         st.header("📊 老師選項")
         pending_count = len(st.session_state.get("pending_questions", []))
         if pending_count > 0:
             st.success(f"🆕 老師新生成：{pending_count} 條題目已加入（喺「揀科目」度揀「🆕 老師新生成」）")
         if st.checkbox("顯示老師工具"):
+            st.caption("下載當前 session 嘅練習紀錄 CSV")
             if st.session_state.get("practice_log"):
                 df_log = pd.DataFrame(st.session_state.practice_log)
                 csv_out = io.StringIO()
                 df_log.to_csv(csv_out, index=False)
-                st.download_button("⬇️ 下載全班結果 CSV", csv_out.getvalue(), "practice_results.csv", "text/csv")
+                st.download_button("⬇️ 下載練習紀錄 CSV", csv_out.getvalue(), "practice_results.csv", "text/csv")
+            else:
+                st.info("未有練習紀錄（學生做過練習先有）")
 
     # 揀科目 + 題目
     subject = st.selectbox("📚 揀科目", list(bank.keys()))
@@ -543,47 +543,44 @@ def render_practice():
     answer = st.text_area("✍️ 喺度打字作答：", height=180, placeholder="寫低你嘅答案⋯")
 
     if st.button("🚀 提交批改", type="primary", disabled=not answer.strip()):
-        if not student_name.strip():
-            st.warning("請先喺側邊欄輸入你嘅名")
+        with st.spinner("🤖 AI 老師批改緊..."):
+            result, err = grade_answer(question["q"], answer.strip(), question["rubric"], api_base, api_key, model)
+        if result:
+            scores = result.get("scores", {})
+            total = result.get("total", sum(scores.values()))
+
+            st.success(f"✅ 批改完成！總分：{total}/40")
+
+            # 分數卡
+            cols = st.columns(len(scores) if scores else 1)
+            for col, (k, v) in zip(cols, scores.items()):
+                col.metric(k, f"{v}/10")
+
+            # 評語
+            st.markdown("### 💬 老師評語")
+            st.markdown(f"> {result.get('comment', '')}")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### ✅ 做得好")
+                for s in result.get("strengths", []):
+                    st.markdown(f"- {s}")
+            with col2:
+                st.markdown("### 🔧 下次改善")
+                for s in result.get("improvements", []):
+                    st.markdown(f"- {s}")
+
+            # 記錄
+            if "practice_log" not in st.session_state:
+                st.session_state.practice_log = []
+            st.session_state.practice_log.append({
+                "科目": subject, "題目": question["q"],
+                "答案": answer.strip(), "總分": total, "評語": result.get("comment", "")
+            })
+
+            st.info("💡 想再試多次？改完答案再撳「提交批改」就得！")
         else:
-            with st.spinner("🤖 AI 老師批改緊..."):
-                result, err = grade_answer(question["q"], answer.strip(), question["rubric"], api_base, api_key, model)
-            if result:
-                scores = result.get("scores", {})
-                total = result.get("total", sum(scores.values()))
-
-                st.success(f"✅ 批改完成！總分：{total}/40")
-
-                # 分數卡
-                cols = st.columns(len(scores) if scores else 1)
-                for col, (k, v) in zip(cols, scores.items()):
-                    col.metric(k, f"{v}/10")
-
-                # 評語
-                st.markdown("### 💬 老師評語")
-                st.markdown(f"> {result.get('comment', '')}")
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("### ✅ 做得好")
-                    for s in result.get("strengths", []):
-                        st.markdown(f"- {s}")
-                with col2:
-                    st.markdown("### 🔧 下次改善")
-                    for s in result.get("improvements", []):
-                        st.markdown(f"- {s}")
-
-                # 記錄
-                if "practice_log" not in st.session_state:
-                    st.session_state.practice_log = []
-                st.session_state.practice_log.append({
-                    "學生": student_name, "科目": subject, "題目": question["q"],
-                    "答案": answer.strip(), "總分": total, "評語": result.get("comment", "")
-                })
-
-                st.info("💡 想再試多次？改完答案再撳「提交批改」就得！")
-            else:
-                st.error(err)
+            st.error(err)
 
     st.divider()
     st.caption("💪 練習多啲，進步快啲！AI 老師 24 小時喺度")
