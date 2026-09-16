@@ -129,6 +129,7 @@ def generate_questions(material_path, subject, count=5):
                 text = q_text(q)
                 if text:
                     q["question"] = text
+                    q["q"] = text  # 雙保險：q 同 question 都有
                     q.setdefault("rubric", RUBRIC_DEFAULT.get(subject, RUBRIC_FALLBACK))
                     q.setdefault("tip", "💡 諗下教材入面講過嘅重點")
                     valid.append(q)
@@ -271,7 +272,7 @@ answers = {}
 # 顯示題目 + 作答區
 st.subheader(f"📝 練習（{len(questions)} 條題目）")
 for i, q in enumerate(questions):
-    st.markdown(f"### {i+1}. {q['q']}")
+    st.markdown(f"### {i+1}. {q_text(q)}")
     with st.expander("💡 提示（撳開睇）"):
         st.markdown(q.get("tip", ""))
     answers[i] = st.text_area(
