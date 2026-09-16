@@ -10,6 +10,7 @@ import streamlit as st
 import os
 import json
 import time
+import traceback
 import requests
 import pandas as pd
 import io
@@ -106,7 +107,19 @@ with tab1:
     
     if uploaded:
         try:
-            df = pd.read_csv(uploaded)
+            # 每次重新讀 bytes（避免 rerun 後 pointer 到尾）+ 自動偵測 encoding
+            raw = uploaded.getvalue()
+            df = None
+            last_err = None
+            for enc in ["utf-8-sig", "utf-8", "gb18030", "big5", "latin-1"]:
+                try:
+                    df = pd.read_csv(io.BytesIO(raw), encoding=enc)
+                    break
+                except Exception as e:
+                    last_err = e
+                    continue
+            if df is None:
+                raise last_err
             st.success(f"✅ 讀到 {len(df)} 份回應")
             
             # 揀作文欄位
@@ -139,6 +152,7 @@ with tab1:
                 st.success(f"✅ 批改完成：{len(results)} 份")
         except Exception as e:
             st.error(f"讀 CSV 出錯: {e}")
+            st.code(traceback.format_exc())
 
 with tab2:
     st.header("✍️ 直接貼文批改")
