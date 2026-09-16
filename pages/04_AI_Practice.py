@@ -14,6 +14,7 @@ import time
 import requests
 import pandas as pd
 import io
+from pathlib import Path
 
 st.set_page_config(page_title="🏋️ AI 練習平台", page_icon="🏋️", layout="wide")
 
@@ -35,14 +36,15 @@ def get_api_config():
         base = "https://api.deepseek.com"
     return base, key, model
 
-# ===== 題目庫（讀 resources/questions/*.json + 內置 fallback）=====
+# ===== 題目庫（讀 resources/questions/*.json + openedujustan folder + 內置 fallback）=====
 def load_question_bank():
-    """讀 repo 入面 resources/questions/ 嘅題目 JSON，合併內置題目"""
+    """讀 repo 入面 resources/questions/ 嘅題目 JSON + openedujustan 文件夾，合併內置題目"""
     bank = {}
     # 內置題目（fallback）
     for k, v in QUESTION_BANK.items():
         bank[k] = [dict(q, **{"rubric": q.get("rubric", "")}) for q in v]
-    # 讀 JSON 題目檔案
+    
+    # 讀 repo 入面 resources/questions/ 嘅題目檔案
     qdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "resources", "questions")
     if os.path.isdir(qdir):
         for fpath in sorted(glob.glob(os.path.join(qdir, "*.json"))):
@@ -60,6 +62,51 @@ def load_question_bank():
                     bank[subject] = qs
             except Exception as e:
                 st.warning(f"讀題目檔案出錯 {fpath}: {e}")
+    
+    # 讀 Mac mini openedujustan folder (.md 練習文件)
+    edu_folder = Path.home() / "Desktop" / "openedujustan"
+    if edu_folder.exists():
+        subject_dirs = {
+            "Chinese": "📕 中文科",
+            "General_Studies": "🌍 常識科",
+            "English": "🔤 英文科",
+            "Maths": "🔢 數學科",
+        }
+        for dir_name, display_name in subject_dirs.items():
+            dir_path = edu_folder / dir_name
+            if dir_path.exists():
+                practice_dir = dir_path / "practice"
+                if not practice_dir.exists():
+                    practice_dir = dir_path
+                for md_file in sorted(practice_dir.rglob("*.md")):
+                    try:
+                        with open(md_file, encoding="utf-8") as f:
+                            content = f.read()
+                        # Extract title (first line starting with #)
+                        title = ""
+                        lines = content.split("\n")
+                        for line in lines:
+                            if line.startswith("# ") and not title:
+                                title = line[2:].strip()
+                                break
+                        if title:
+                            # Use first 300 chars of content as the question
+                            question_text = "\n".join(lines[:20]).strip()
+                            if display_name not in bank:
+                                bank[display_name] = []
+                            bank[display_name].append({
+                                "q": f"[{title}] {question_text[:200]}",
+                                "hint": f"💡 提示：完整題目來自 {md_file.name}，請仔細閱讀並作答。",
+                                "rubric": """- 內容準確性（Accuracy）：答案正確、冇事實錯誤
+- 解釋清晰度（Clarity）：解釋有邏輯
+- 關鍵詞運用（Keywords）：有用到教材關鍵詞
+- 完整性（Completeness）：有答齊所有部分""",
+                                "source": str(md_file),
+                                "full_content": content,
+                            })
+                    except Exception as e:
+                        pass  # Silently skip unreadable files
+    
     return bank
 
 QUESTION_BANK = {
