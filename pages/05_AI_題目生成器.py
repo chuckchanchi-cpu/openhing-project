@@ -132,13 +132,18 @@ def load_question_bank():
     return bank
 
 # ===== 生成器：題目格式轉換 + AI 生成 =====
+def q_text(q):
+    """攞題目文字 — AI 可能用唔同 key，全部 fallback"""
+    return (q.get('question') or q.get('title') or q.get('content')
+            or q.get('text') or q.get('question_text') or '').strip()
+
 def to_practice_format(q, subject):
     """將生成器題目 dict 轉做練習平台格式"""
     return {
-        "q": q.get('question') or q.get('title', ''),
-        "hint": q.get('tip', ''),
+        "q": q_text(q),
+        "hint": q.get('tip', '') or q.get('hint', ''),
         "rubric": RUBRIC_DEFAULT.get(subject, RUBRIC_FALLBACK),
-        "answer": q.get('reference_answer', ''),
+        "answer": q.get('reference_answer', '') or q.get('answer', ''),
     }
 
 def generate_questions(subject, grade, topic, count=5, material_path=None):
@@ -302,7 +307,8 @@ def render_generator():
 
         subject = st.selectbox("科目", ["中文", "常識", "英文", "數學"],
                                index=["中文", "常識", "英文", "數學"].index(st.session_state.current_subject))
-        grade = st.selectbox("年級", ["小一", "小二", "小三", "小四", "小五", "小六"])
+        # 學校只有小六 — 年級固定
+        grade = "小六"
         topic = st.text_input("主題 (可選)", placeholder="例如：水的循環、近義詞、小數除法")
         question_count = st.slider("題目數量", 1, 10, 5)
 
@@ -347,11 +353,11 @@ def render_generator():
         st.subheader("📋 生成嘅題目")
 
         for idx, q in enumerate(st.session_state.generated_questions):
-            with st.expander(f"#{q.get('id', idx+1)} {q.get('title', '未命名')}", expanded=(idx == 0)):
+            with st.expander(f"#{q.get('id', idx+1)} {(q_text(q) or '未命名')[:30]}", expanded=(idx == 0)):
                 col_a, col_b = st.columns([3, 1])
 
                 with col_a:
-                    st.markdown(f"**{q.get('question', '無內容')}**")
+                    st.markdown(f"**{q_text(q) or '（無題目內容）'}**")
                     st.markdown("**評分標準：**")
                     st.write(f"- 難度: {q.get('difficulty', '中等')}")
                     st.write(f"- 分數: {q.get('marks', 10)} 分")
@@ -436,16 +442,24 @@ def render_generator():
                     st.session_state.pending_questions = []
                 existing_q = {x.get("q") for x in st.session_state.pending_questions}
                 added = 0
+                dupes = 0
                 for p in pending:
                     if p.get("q") and p["q"] not in existing_q:
                         st.session_state.pending_questions.append(p)
                         existing_q.add(p["q"])
                         added += 1
+                    else:
+                        dupes += 1
                 if added > 0:
                     st.session_state.pending_added = added
                     msg = f"🎉 已發布 {added} 條題目去練習平台！"
+                    stats = []
                     if skipped:
-                        msg += f"（{skipped} 條格式不完整被跳過 — 可以撳「🔄 重出這題」）"
+                        stats.append(f"{skipped} 條格式不完整被跳過")
+                    if dupes:
+                        stats.append(f"{dupes} 條同之前重複")
+                    if stats:
+                        msg += "（" + "、".join(stats) + "）"
                     st.success(msg)
                     st.info("👉 而家切去上面「🏋️ AI 練習平台」tab → 揀科目「🆕 老師新生成」→ 學生即刻做到！")
                     st.balloons()
@@ -454,7 +468,7 @@ def render_generator():
 
         # 永久保存：下載 JSON 俾 Openclaw commit 入題目庫
         with st.expander("💾 永久保存（下載 JSON 俾 Openclaw commit 入 resources/questions/）"):
-            payload_qs = [to_practice_format(q, subject) for q in st.session_state.generated_questions if (q.get('question') or q.get('title'))]
+            payload_qs = [to_practice_format(q, subject) for q in st.session_state.generated_questions if q_text(q)]
             payload = json.dumps({
                 "subject": f"🆕 {subject}（AI 生成）",
                 "source": f"AI 生成（{subject} {grade} {topic or ''}）— {datetime.now().strftime('%Y-%m-%d')}",
