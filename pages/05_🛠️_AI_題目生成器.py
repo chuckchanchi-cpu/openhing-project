@@ -9,6 +9,7 @@ import streamlit as st
 import os
 import json
 import glob
+import time
 import requests
 
 st.set_page_config(page_title="🛠️ AI 題目生成器", page_icon="🛠️", layout="wide")
@@ -205,7 +206,13 @@ if st.session_state.gen_questions:
                     st.session_state.pending_questions.append(q)
                     existing.add(q.get("q"))
                     added += 1
-            st.success(f"✅ 已採用 {added} 條新題目！去「🏋️ AI 練習」→ 揀「🆕 老師新生成」就見到")
+            if added > 0:
+                st.success(f"✅ 已採用 {added} 條新題目！而家帶你去練習平台...")
+                st.session_state.pending_added = added
+                time.sleep(1.5)
+                st.switch_page("pages/04_🏋️_AI_練習.py")
+            else:
+                st.info("呢批題目之前已經採用過，冇重複加入")
     with c2:
         # 下載 JSON（俾 Openclaw commit 入題目庫）
         payload = json.dumps({"subject": "🆕 老師新生成", "source": f"AI 生成（{tb_name}）", "questions": qs}, ensure_ascii=False, indent=2)
