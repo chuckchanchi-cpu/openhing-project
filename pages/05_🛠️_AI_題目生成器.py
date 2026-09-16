@@ -36,9 +36,10 @@ def get_api_config():
 TEXTBOOK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "resources", "openedujustan")
 
 # 練習平台 page 實際路徑（檔名有 emoji，用 glob 攞真實名避免編碼 mismatch）
+# 注意：switch_page/page_link 要「相對 main script」嘅路徑，唔可以用絕對路徑
 PRACTICE_PAGE = None
 for _f in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "04*.py")):
-    PRACTICE_PAGE = _f
+    PRACTICE_PAGE = "pages/" + os.path.basename(_f)
     break
 
 def list_textbooks():
