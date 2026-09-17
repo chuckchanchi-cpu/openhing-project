@@ -86,17 +86,27 @@ def generate_questions(material_path, subject, count=5):
 **教材內容（題目必須根據呢份教材嚟出，用返教材嘅詞彙、概念同例子）：**
 {material_ctx}
 
-請根據教材生成 {count} 條練習題目，要求：
-1. 題目涵蓋教材嘅唔同重點（由淺入深）
-2. 每條題目要獨立、清晰，適合小六學生
+請根據教材生成 {count} 條練習題目。**難度必須由淺入深，一條比一條難（嚴格遞增，第 1 題最簡單）**：
+
+**難度階梯（必須跟足）：**
+- 第 1 題（⭐）：最簡單 — 直接從教材搵到答案嘅基礎題（記憶/辨認/詞語）
+- 第 2 題（⭐⭐）：簡單 — 基礎理解題（解釋一個概念/詞語/句子意思）
+- 第 3 題（⭐⭐⭐）：中等 — 簡單應用題（套用教材例子做一步計算/改寫/填充）
+- 第 4 題（⭐⭐⭐⭐）：較難 — 綜合應用（多步驟/要比較/要分析/要舉例）
+- 第 5 題（⭐⭐⭐⭐⭐）：最難 — 挑戰題（開放式/要解釋原因/跨概念綜合/要發表看法）
+
+**其他要求：**
+1. 每條題目要獨立、清晰，適合小六學生
+2. 難度要逐步升級，唔可以出現「後一條仲易過前一條」
 3. 每條題目包含：
    - "question": 題目內容
+   - "difficulty": 難度級數（"⭐"/"⭐⭐"/"⭐⭐⭐"/"⭐⭐⭐⭐"/"⭐⭐⭐⭐⭐"，對應上面階梯）
    - "tip": 提示（引導學生思考，唔好直接俾答案）
    - "rubric": 評分準則（4 項，每項 0-10 分，用廣東話/英文視乎科目）
 
 **輸出格式（只輸出 JSON array，唔好有其他文字）：**
 [
-  {{"question": "...", "tip": "...", "rubric": "..."}},
+  {{"question": "...", "difficulty": "⭐", "tip": "...", "rubric": "..."}},
   ...
 ]"""
 
@@ -132,6 +142,7 @@ def generate_questions(material_path, subject, count=5):
                     q["q"] = text  # 雙保險：q 同 question 都有
                     q.setdefault("rubric", RUBRIC_DEFAULT.get(subject, RUBRIC_FALLBACK))
                     q.setdefault("tip", "💡 諗下教材入面講過嘅重點")
+                    q.setdefault("difficulty", "")
                     valid.append(q)
             return valid
         except json.JSONDecodeError:
@@ -271,8 +282,10 @@ answers = {}
 
 # 顯示題目 + 作答區
 st.subheader(f"📝 練習（{len(questions)} 條題目）")
+st.caption("🎯 由淺入深：第 1 題最簡單，越後越有挑戰性，加油！")
 for i, q in enumerate(questions):
-    st.markdown(f"### {i+1}. {q_text(q)}")
+    diff = q.get("difficulty", "")
+    st.markdown(f"### {i+1}. {q_text(q)}　{diff}")
     with st.expander("💡 提示（撳開睇）"):
         st.markdown(q.get("tip", ""))
     answers[i] = st.text_area(
