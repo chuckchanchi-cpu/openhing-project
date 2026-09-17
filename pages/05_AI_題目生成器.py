@@ -202,10 +202,16 @@ def generate_cloze(material_path, subject):
 4. **出完自檢** — 每個空格嘅答案都一定要喺教材內容出現過
 
 **文章要求：**
-- 長度：英文 150-300 字；中文 120-250 字
-- 主題：圍繞教材主題（例如動物領養、植物適應環境、課文道理），生活化
-- 空格：4-6 個，用（1）（2）（3）...標記；**難度遞增**（前面嘅空格容易、後面嘅難）
-- 每個空格嘅答案詞語要喺文章語境中唯一合理
+- 文章長度：英文 150-300 字；中文 120-250 字
+- 文章主題：圍繞教材主題（例如動物領養、植物適應環境、課文道理），生活化
+- 文章內要包含 6-8 個「目標詞彙」（即係學生要喺文章搵到嘅詞）
+
+**填充題要求（重點）：**
+- 另外出 4-6 條**新填充題**，用（1）（2）（3）...標記
+- 每題係一條**新句子**（唔可以照抄文章句子，要換情境、換講法），句子入面有一個空格
+- **每個空格嘅答案 = 文章入面出現過嘅詞語**（目標詞彙之一）
+- **難度遞增**：前面嘅題目答案容易搵（喺文章開頭直接出現），後面嘅難（要理解文章先搵到）
+- 每題嘅 tip 一定要講「答案喺文章邊度搵」（例如：留意第 2 段關於動物庇護所嘅句子）
 
 **語言要求（必須跟足）：**
 - 英文科：文章、提示、答案全英文
@@ -213,19 +219,19 @@ def generate_cloze(material_path, subject):
 
 **輸出格式（只輸出 JSON object，唔好有其他文字）：**
 {{
-  "article": "成篇文章（空格位置用（1）（2）...標記）",
-  "word_bank": ["詞1", "詞2", "詞3", ...],
-  "blanks": [
-    {{"id": 1, "answer": "正確答案詞語", "tip": "書面語提示：點樣從文章搵到答案（例如留意邊句線索/詞性）"}},
+  "article": "成篇文章（正常文章，冇空格）",
+  "questions": [
+    {{"id": 1, "sentence": "新句子，空格用（1）標記", "answer": "答案詞語（必須喺文章出現過）", "tip": "書面語提示：答案喺文章邊度搵（例如：留意第 2 段關於……嘅句子）"}},
     ...
-  ]
+  ],
+  "word_bank": ["詞1", "詞2", ...]（可選：答案詞語嘅詞彙庫，幫學生篩選）
 }}"""
 
         payload = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "請根據教材生成一篇文章填空練習（4-6 個空格 + Word Bank + 答案提示），全部用教材內容！"}
+                {"role": "user", "content": "請根據教材生成：一篇短文 + 4-6 條新填充題（答案要喺文章入面搵到），全部用教材內容！"}
             ],
             "max_tokens": 3000,
             "temperature": 0.8
@@ -241,13 +247,16 @@ def generate_cloze(material_path, subject):
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
         cloze = json.loads(content)
-        if not cloze.get("article") or not cloze.get("blanks"):
-            st.error("❌ AI 回覆格式唔啱（缺 article/blanks）— 請再試一次")
+        if not cloze.get("article") or not (cloze.get("questions") or cloze.get("blanks")):
+            st.error("❌ AI 回覆格式唔啱（缺 article/questions）— 請再試一次")
             return None
         cloze.setdefault("word_bank", [])
-        for b in cloze["blanks"]:
-            b.setdefault("tip", "💡 睇下空格前後嘅線索，返教材搵答案")
+        qs = cloze.get("questions") or cloze.get("blanks")
+        for b in qs:
+            b.setdefault("sentence", "")
+            b.setdefault("tip", "💡 答案喺文章入面，留意空格前後嘅意思，返文章搵")
             b.setdefault("answer", "")
+        cloze["questions"] = qs
         return cloze
     except Exception as e:
         st.error(f"❌ 生成出錯：{str(e)}")
@@ -258,14 +267,14 @@ def generate_cloze(material_path, subject):
 def grade_cloze(cloze, answers, api_base, api_key, model):
     if not api_key:
         return None, "未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY"
-    blanks = cloze.get("blanks", [])
+    blanks = cloze.get("questions") or cloze.get("blanks", [])
     lines = []
     for b in blanks:
         bid = b.get("id")
         student_ans = answers.get(bid, "").strip() or "（冇作答）"
-        lines.append(f"（{bid}）學生答案：{student_ans}｜正確答案：{b.get('answer','')}")
+        lines.append(f"（{bid}）句子：{b.get('sentence','')}｜學生答案：{student_ans}｜正確答案：{b.get('answer','')}｜答案喺文章邊度：{b.get('tip','')}")
     ans_text = "\n".join(lines)
-    prompt = f"""你係一位專業同友善嘅小學老師。以下係文章填空練習嘅學生答案同正確答案，請逐個空格批改：
+    prompt = f"""你係一位專業同友善嘅小學老師。以下係「從文章中搵詞語填空」練習嘅學生答案同正確答案（學生要喺文章入面搵啱嘅詞語，填入新句子嘅空格），請逐題批改：
 
 {ans_text}
 
@@ -386,10 +395,10 @@ with st.sidebar:
 
     st.divider()
 
-    train_mode = st.radio("訓練模式", ["🎯 每日溫習（混合題型）", "📖 文章填空（Cloze）"], key="train_mode")
+    train_mode = st.radio("訓練模式", ["🎯 每日溫習（混合題型）", "📖 文章填充（從文章搵詞）"], key="train_mode")
     is_cloze = train_mode.startswith("📖")
 
-    if st.button("🎲 生成文章填空" if is_cloze else "🎲 生成 5 條題目", type="primary", use_container_width=True):
+    if st.button("🎲 生成文章+填充題" if is_cloze else "🎲 生成 5 條題目", type="primary", use_container_width=True):
         if is_cloze:
             with st.spinner(f"🤖 根據《{material_choice}》生成緊文章填空..."):
                 cloze = generate_cloze(material_path, subject)
@@ -467,8 +476,8 @@ if st.session_state.cloze_mode and st.session_state.current_cloze:
     cloze = st.session_state.current_cloze
     st.markdown(f"**📖 教材：** `{st.session_state.current_material}`　**📚 科目：** {subject}")
     st.divider()
-    st.subheader("📖 文章填空訓練（Cloze）")
-    st.caption("🎯 從文章同教材搵出啱嘅詞語填空 — 由淺入深，加油！")
+    st.subheader("📖 文章填充訓練（從文章搵詞語）")
+    st.caption("🎯 先讀文章，再喺文章入面搵出啱嘅詞語填入新句子 — 由淺入深，加油！")
 
     article = cloze.get("article", "")
     article_disp = re.sub(r"（(\d+)）", r"＿＿＿（\1）＿＿＿", article)
@@ -478,12 +487,13 @@ if st.session_state.cloze_mode and st.session_state.current_cloze:
     if word_bank:
         st.markdown("**🧰 詞彙庫（Word Bank）：**　" + "　・　".join(word_bank))
 
-    blanks = cloze.get("blanks", [])
+    blanks = cloze.get("questions") or cloze.get("blanks", [])
     cloze_answers = {}
     for b in blanks:
         bid = b.get("id")
-        st.markdown(f"### （{bid}）")
-        cloze_answers[bid] = st.text_input(f"（{bid}）請填上適當詞語", key=f"cloze_{bid}", placeholder="打低你嘅答案⋯")
+        sentence_disp = re.sub(r"（(\d+)）", r"＿＿＿（\1）＿＿＿", b.get("sentence", ""))
+        st.markdown(f"### （{bid}）{sentence_disp}")
+        cloze_answers[bid] = st.text_input(f"（{bid}）請從文章中揾出適當詞語填入", key=f"cloze_{bid}", placeholder="打低你嘅答案⋯")
         with st.expander(f"💡 提示（第 {bid} 題）"):
             st.markdown(b.get("tip", ""))
 
