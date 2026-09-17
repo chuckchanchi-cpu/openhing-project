@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 st.set_page_config(page_title="🎓 OpenEduJustan AI 出題平台", page_icon="🎓", layout="wide")
@@ -12,19 +12,105 @@ SILRA_API_URL = "https://api.silra.cn/v1/chat/completions"
 SILRA_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-HfiuPr1xWenSQUsB5x0PPtHW3gVYN9MBUXTVQ67orNPED24y")
 MODEL = "deepseek-chat"
 
+# Student names for personalized questions
+STUDENT_NAMES = ["皓一", "仲庭", "仲希", "少軍", "心謐", "信一", "Hugo", "Jay", "Ethan", "依純"]
+
+def load_md_context(subject, grade):
+    """Load relevant MD files from openedujustan folder"""
+    md_files = []
+    base_path = Path("/Users/fring1117/Desktop/openedujustan")
+    
+    # Search for relevant MD files based on subject and grade
+    if subject == "數學":
+        search_patterns = [
+            "Maths/**/*.md",
+            "Maths/practice/*.md"
+        ]
+    elif subject == "中文":
+        search_patterns = [
+            "Chinese/**/*.md",
+            "Chinese/practice/*.md"
+        ]
+    elif subject == "英文":
+        search_patterns = [
+            "English/**/*.md",
+            "English/practice/*.md"
+        ]
+    elif subject == "常識":
+        search_patterns = [
+            "General_Studies/**/*.md",
+            "General_Studies/practice/*.md"
+        ]
+    else:
+        search_patterns = ["**/*.md"]
+    
+    content = ""
+    cutoff_date = datetime.now() - timedelta(days=30)
+    
+    for pattern in search_patterns:
+        for file_path in base_path.glob(pattern):
+            if file_path.is_file() and file_path.suffix == '.md':
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                        # Only include recent files (last 30 days) to avoid outdated content
+                        if datetime.fromtimestamp(file_path.stat().st_mtime) >= cutoff_date:
+                            content += f"\n\n## File: {file_path.name}\n{file_content[:2000]}\n"  # Limit content per file
+                            md_files.append(str(file_path))
+                except Exception as e:
+                    st.warning(f"⚠️ 讀取文件失敗: {file_path.name}")
+    
+    return content, md_files
+
 def generate_questions(subject, grade, topic, count=5):
-    """Generate practice questions using AI"""
+    """Generate practice questions using AI based on local MD files only"""
     try:
-        system_prompt = f"""你係一位經驗豐富嘅小學{subject}科老師，專門為{grade}學生設計練習題目。
+        # Load context from MD files
+        md_content, md_files = load_md_context(subject, grade)
+        
+        if not md_content:
+            return [{
+                "id": 1,
+                "title": f"{subject}練習 - {topic or '綜合'}",
+                "question": f"請提供 {subject} 相關學習材料（MD文件）以生成題目。",
+                "difficulty": "簡單",
+                "marks": 10,
+                "reference_answer": "需要 MD 文件內容",
+                "tip": "💡 請先上傳或創建相關的 MD 學習材料",
+                "question_type": "MC",
+                "source_file": "無"
+            }]
+        
+        system_prompt = f"""你是一位經驗豐富的國小{subject}科教師，專門為{grade}學生設計每日複習題目。
 
-請根據以下要求生成 {count} 條練習題目：
+**重要指示：**
+1. **嚴格基於以下提供的 MD 檔案內容生成題目**
+2. **不要從網路或其他來源獲取額外內容**
+3. **題目必須直接引用或改編自 MD 檔案中的知識點**
+4. **按難度遞增排列：第1題最簡單，最後一題最困難**
+5. **混合不同題型：MC、短答、長答、是非題**
+6. **使用以下學生姓名讓題目更親切：{', '.join(STUDENT_NAMES)}**
 
-**要求：**
+**提供的 MD 檔案內容：**
+{md_content[:5000]}
+
+**生成要求：**
 1. 題目要清晰、具體，適合{grade}學生水平
-2. 涵蓋不同難易度 (簡單、中等、挑戰)
-3. 每條題目包含：題目內容、評分標準、參考答案
-4. 用{subject}語撰寫 (英文科用英文，其他用廣東話)
+2. **難度必須遞增**：第1題(簡單) → 第2題(簡單) → ... → 最後一題(挑戰)
+3. **混合題型**：
+   - MC (選擇題)：4個選項，1個正確
+   - 短答題：1-2句答案
+   - 長答題：完整句子/段落
+   - 是非題：True/False + 解釋
+4. **使用書面語撰寫**（非口語）：
+   - 中文科：使用標準書面中文，避免粵語口語
+   - 英文科：使用正式英文
+   - 數學科：使用標準數學術語
+   - 常識科：使用標準書面中文
 5. 格式要統一，方便學生作答
+6. **所有題目必須能從上述 MD 內容中找到依據**
+7. **這是每日複習，不是新學習**：只複習已學知識，不引入新概念
+8. **題目要有趣、吸引人**：使用學生姓名、生活場景
 
 **輸出格式 (JSON)：**
 ```json
@@ -33,10 +119,12 @@ def generate_questions(subject, grade, topic, count=5):
     "id": 1,
     "title": "題目標題",
     "question": "完整題目內容",
+    "question_type": "MC/ShortAnswer/LongAnswer/TrueFalse",
     "difficulty": "簡單/中等/挑戰",
     "marks": 10,
     "reference_answer": "參考答案要点",
-    "tip": "提示或解題技巧"
+    "tip": "提示或解題技巧",
+    "source_file": "相關 MD 文件名"
   }}
 ]
 ```
@@ -76,6 +164,15 @@ def generate_questions(subject, grade, topic, count=5):
                     json_str = content
                 
                 questions = json.loads(json_str)
+                
+                # Sort by difficulty to ensure progressive difficulty
+                difficulty_order = {"簡單": 1, "中等": 2, "挑戰": 3}
+                questions.sort(key=lambda x: difficulty_order.get(x.get("difficulty", "中等"), 2))
+                
+                # Reassign IDs after sorting
+                for i, q in enumerate(questions):
+                    q["id"] = i + 1
+                
                 return questions
             except json.JSONDecodeError:
                 # If JSON parsing fails, create a fallback question
@@ -86,7 +183,9 @@ def generate_questions(subject, grade, topic, count=5):
                     "difficulty": "中等",
                     "marks": 10,
                     "reference_answer": "參見 AI 生成內容",
-                    "tip": "💡 仔細閱讀題目，結合所學知識作答。"
+                    "tip": "💡 仔細閱讀題目，結合所學知識作答。",
+                    "question_type": "MC",
+                    "source_file": "無"
                 }]
         else:
             st.error(f"❌ AI 生成失敗 (錯誤碼: {response.status_code})")
@@ -99,13 +198,13 @@ def get_ai_feedback(question, answer, subject, grade):
     """Get AI feedback for student answer"""
     try:
         prompts = {
-            "中文": f"你係一位經驗豐富嘅小學中文老師。請批改以下{grade}學生嘅作文/文章。\n\n**評分標準：**\n1. 內容完整性 (40%)\n2. 語法同拼寫 (30%)\n3. 表達清晰度 (20%)\n4. 創意同深度 (10%)\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：總評、優點、需要改進嘅地方、具體修改建議。用廣東話回覆。",
+            "中文": f"你是一位經驗豐富的小學中文老師。請批改以下{grade}學生的作文/文章。\n\n**評分標準：**\n1. 內容完整性 (40%)\n2. 語法同拼寫 (30%)\n3. 表達清晰度 (20%)\n4. 創意同深度 (10%)\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：總評、優點、需要改進的地方、具體修改建議。用廣東話回覆。",
             
-            "常識": f"你係一位經驗豐富嘅小學常識科老師。請批改以下{grade}學生嘅開放式問題答案。\n\n**評分標準：**\n1. 答案完整性 (40%) - 有冇答晒所有部分？\n2. 知識準確性 (30%) - 科學概念正確嗎？\n3. 邏輯清晰度 (20%) - 論述有條理嗎？\n4. 例子運用 (10%) - 有冇具體例子支持？\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：總評、知識點檢查、改進建議。用廣東話回覆。",
+            "常識": f"你是一位經驗豐富的小學常識科老師。請批改以下{grade}學生的開放式問題答案。\n\n**評分標準：**\n1. 答案完整性 (40%) - 有冇答晒所有部分？\n2. 知識準確性 (30%) - 科學概念正確嗎？\n3. 邏輯清晰度 (20%) - 論述有條理嗎？\n4. 例子運用 (10%) - 有冇具體例子支持？\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：總評、知識點檢查、改進建議。用廣東話回覆。",
             
             "英文": f"You are an experienced primary school English teacher. Please grade this {grade} student's writing.\n\n**Grading Criteria:**\n1. Content & Relevance (40%)\n2. Grammar & Spelling (30%)\n3. Clarity & Coherence (20%)\n4. Vocabulary (10%)\n\n**Question**: {question}\n**Student Answer**: {answer}\n\nPlease provide: Overall assessment, strengths, areas for improvement, specific suggestions. Reply in Cantonese.",
             
-            "數學": f"你係一位經驗豐富嘅小學數學老師。請批改以下{grade}學生嘅應用題解答。\n\n**評分標準：**\n1. 方法正確性 (40%)\n2. 計算準確性 (30%)\n3. 步驟完整性 (20%)\n4. 答案合理性 (10%)\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：方法評估、計算檢查、錯誤定位、改進建議。用廣東話回覆。"
+            "數學": f"你是一位經驗豐富的小學數學老師。請批改以下{grade}學生的應用題解答。\n\n**評分標準：**\n1. 方法正確性 (40%)\n2. 計算準確性 (30%)\n3. 步驟完整性 (20%)\n4. 答案合理性 (10%)\n\n**問題**: {question}\n**學生答案**: {answer}\n\n請提供：方法評估、計算檢查、錯誤定位、改進建議。用廣東話回覆。"
         }
         
         payload = {
@@ -214,18 +313,22 @@ if st.session_state.generated_questions:
     st.subheader("📋 生成嘅題目")
     
     for idx, q in enumerate(st.session_state.generated_questions):
-        with st.expander(f"#{q.get('id', idx+1)} {q.get('title', '未命名')}", expanded=(idx == 0)):
+        with st.expander(f"#{q.get('id', idx+1)} {q.get('title', '未命名')} ({q.get('question_type', 'MC')})", expanded=(idx == 0)):
             col_a, col_b = st.columns([3, 1])
             
             with col_a:
                 st.markdown(f"**{q.get('question', '無內容')}**")
                 
                 st.markdown("**評分標準：**")
+                st.write(f"- 題型: {q.get('question_type', 'MC')}")
                 st.write(f"- 難度: {q.get('difficulty', '中等')}")
                 st.write(f"- 分數: {q.get('marks', 10)} 分")
                 
                 if q.get('tip'):
                     st.info(q['tip'])
+                
+                if q.get('source_file'):
+                    st.caption(f"📁 來源: {q['source_file']}")
             
             with col_b:
                 st.markdown("**教師操作：**")
@@ -278,6 +381,7 @@ if st.session_state.generated_questions:
                 for q in st.session_state.generated_questions:
                     f.write(f"## #{q.get('id', 'N/A')} {q.get('title', '未命名')}\n\n")
                     f.write(f"{q.get('question', '')}\n\n")
+                    f.write(f"- 題型: {q.get('question_type', 'MC')}\n")
                     f.write(f"- 難度: {q.get('difficulty', '中等')}\n")
                     f.write(f"- 分數: {q.get('marks', 10)} 分\n")
                     if q.get('tip'):
