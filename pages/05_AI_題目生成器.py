@@ -17,6 +17,7 @@ import json
 import glob
 import io
 import requests
+import re
 import pandas as pd
 from datetime import datetime
 
@@ -177,6 +178,129 @@ def generate_questions(material_path, subject, count=5):
         st.error(f"❌ 生成出錯：{str(e)}")
         return []
 
+# ===== 文章填空（Cloze）生成 =====
+def generate_cloze(material_path, subject):
+    api_base, api_key, model = get_api_config()
+    if not api_key:
+        st.error("⚠️ 未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY")
+        return None
+    try:
+        with open(material_path, encoding="utf-8") as f:
+            material_ctx = f.read()[:5000]
+
+        system_prompt = f"""你係一位經驗豐富嘅小學六年級{subject}科老師。
+
+**教材內容（文章同詞語必須根據呢份教材嚟寫，用返教材嘅詞彙、概念同例子）：**
+{material_ctx}
+
+請根據教材生成一篇**文章填空（Cloze）練習**。**呢個係「每日溫習」**：目的係幫學生練習「從文章中搵詞語填空」，回顧學校今日所學，唔好出太深太偏嘅嘢嚇怕學生。
+
+**🔒 鐵律（最重要，必須跟足）：**
+1. **只准用教材內容** — 文章主題、詞彙、概念全部要喺上面教材內容出現過
+2. **嚴禁教材以外嘅知識** — 唔可以用互聯網/課外常識嘅事實
+3. **難度升級只可以「基於教材延伸」** — 換情境/換角度/綜合教材概念，唔准引入新知識
+4. **出完自檢** — 每個空格嘅答案都一定要喺教材內容出現過
+
+**文章要求：**
+- 長度：英文 150-300 字；中文 120-250 字
+- 主題：圍繞教材主題（例如動物領養、植物適應環境、課文道理），生活化
+- 空格：4-6 個，用（1）（2）（3）...標記；**難度遞增**（前面嘅空格容易、後面嘅難）
+- 每個空格嘅答案詞語要喺文章語境中唯一合理
+
+**語言要求（必須跟足）：**
+- 英文科：文章、提示、答案全英文
+- 其他科：文章、提示、答案用正式書面語（學校測驗卷風格），嚴禁口語/廣東話
+
+**輸出格式（只輸出 JSON object，唔好有其他文字）：**
+{{
+  "article": "成篇文章（空格位置用（1）（2）...標記）",
+  "word_bank": ["詞1", "詞2", "詞3", ...],
+  "blanks": [
+    {{"id": 1, "answer": "正確答案詞語", "tip": "書面語提示：點樣從文章搵到答案（例如留意邊句線索/詞性）"}},
+    ...
+  ]
+}}"""
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "請根據教材生成一篇文章填空練習（4-6 個空格 + Word Bank + 答案提示），全部用教材內容！"}
+            ],
+            "max_tokens": 3000,
+            "temperature": 0.8
+        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=180)
+        if response.status_code != 200:
+            st.error(f"❌ AI 生成失敗（錯誤碼 {response.status_code}）：{response.text[:200]}")
+            return None
+        content = response.json()["choices"][0]["message"]["content"]
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        cloze = json.loads(content)
+        if not cloze.get("article") or not cloze.get("blanks"):
+            st.error("❌ AI 回覆格式唔啱（缺 article/blanks）— 請再試一次")
+            return None
+        cloze.setdefault("word_bank", [])
+        for b in cloze["blanks"]:
+            b.setdefault("tip", "💡 睇下空格前後嘅線索，返教材搵答案")
+            b.setdefault("answer", "")
+        return cloze
+    except Exception as e:
+        st.error(f"❌ 生成出錯：{str(e)}")
+        return None
+
+
+# ===== AI 批改文章填空 =====
+def grade_cloze(cloze, answers, api_base, api_key, model):
+    if not api_key:
+        return None, "未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY"
+    blanks = cloze.get("blanks", [])
+    lines = []
+    for b in blanks:
+        bid = b.get("id")
+        student_ans = answers.get(bid, "").strip() or "（冇作答）"
+        lines.append(f"（{bid}）學生答案：{student_ans}｜正確答案：{b.get('answer','')}")
+    ans_text = "\n".join(lines)
+    prompt = f"""你係一位專業同友善嘅小學老師。以下係文章填空練習嘅學生答案同正確答案，請逐個空格批改：
+
+{ans_text}
+
+請輸出 JSON array，每項對應一個空格：
+- "id": 空格編號
+- "correct": true/false（同正確答案一致先算啱；英文串法小錯可當啱但要喺評語提醒）
+- "feedback": 書面語評語（英文科用英文）— 啱：讚一句 + 簡單講點解係呢個詞；錯：話俾學生聽正確答案 + 點樣從文章搵（留意邊啲線索）
+- "total": 0 或 1
+
+最後加一項總結：{{"id": 0, "correct": true, "feedback": "總結：X/Y 題答啱，……（鼓勵說話，書面語）", "total": 0}}
+只輸出 JSON array，唔好有其他文字。"""
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "你係一位專業、友善、有耐心嘅小學老師，評語用正式書面語（英文科用英文）。"},
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 2000,
+        "temperature": 0.3
+    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    try:
+        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=180)
+        if response.status_code != 200:
+            return None, f"❌ AI 批改失敗（錯誤碼 {response.status_code}）：{response.text[:200]}"
+        content = response.json()["choices"][0]["message"]["content"]
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        return json.loads(content), None
+    except Exception as e:
+        return None, f"❌ 批改出錯：{str(e)}"
+
+
 # ===== AI 一次過批改 5 條 =====
 def grade_all(questions, answers, api_base, api_key, model):
     """一次過批改所有題目，回傳 list of result dict"""
@@ -245,6 +369,10 @@ if 'current_material' not in st.session_state:
     st.session_state.current_material = None
 if 'grade_results' not in st.session_state:
     st.session_state.grade_results = None
+if 'current_cloze' not in st.session_state:
+    st.session_state.current_cloze = None
+if 'cloze_mode' not in st.session_state:
+    st.session_state.cloze_mode = False
 
 # ===== Sidebar =====
 with st.sidebar:
@@ -258,28 +386,61 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("🎲 生成 5 條題目", type="primary", use_container_width=True):
-        with st.spinner(f"🤖 根據《{material_choice}》生成緊 5 條題目..."):
-            qs = generate_questions(material_path, subject, 5)
-        if qs:
-            st.session_state.current_questions = qs
-            st.session_state.current_material = material_choice
-            st.session_state.grade_results = None
-            st.success(f"✅ 生成咗 {len(qs)} 條題目！")
-        else:
-            st.error("❌ 生成失敗，請再試")
+    train_mode = st.radio("訓練模式", ["🎯 每日溫習（混合題型）", "📖 文章填空（Cloze）"], key="train_mode")
+    is_cloze = train_mode.startswith("📖")
 
-    if st.session_state.current_questions:
-        if st.button("🔄 新一輪（重新生成）", use_container_width=True):
-            with st.spinner("🤖 重新生成緊..."):
+    if st.button("🎲 生成文章填空" if is_cloze else "🎲 生成 5 條題目", type="primary", use_container_width=True):
+        if is_cloze:
+            with st.spinner(f"🤖 根據《{material_choice}》生成緊文章填空..."):
+                cloze = generate_cloze(material_path, subject)
+            if cloze:
+                st.session_state.current_cloze = cloze
+                st.session_state.current_material = material_choice
+                st.session_state.grade_results = None
+                st.session_state.current_questions = []
+                st.session_state.cloze_mode = True
+                st.success("✅ 文章填空準備好！")
+            else:
+                st.error("❌ 生成失敗，請再試")
+        else:
+            with st.spinner(f"🤖 根據《{material_choice}》生成緊 5 條題目..."):
                 qs = generate_questions(material_path, subject, 5)
             if qs:
                 st.session_state.current_questions = qs
                 st.session_state.current_material = material_choice
                 st.session_state.grade_results = None
-                st.success("✅ 新一輪題目準備好！")
+                st.session_state.current_cloze = None
+                st.session_state.cloze_mode = False
+                st.success(f"✅ 生成咗 {len(qs)} 條題目！")
             else:
                 st.error("❌ 生成失敗，請再試")
+
+    if st.session_state.current_questions or st.session_state.current_cloze:
+        if st.button("🔄 新一輪（重新生成）", use_container_width=True):
+            if is_cloze:
+                with st.spinner("🤖 重新生成緊..."):
+                    cloze = generate_cloze(material_path, subject)
+                if cloze:
+                    st.session_state.current_cloze = cloze
+                    st.session_state.current_material = material_choice
+                    st.session_state.grade_results = None
+                    st.session_state.current_questions = []
+                    st.session_state.cloze_mode = True
+                    st.success("✅ 新文章準備好！")
+                else:
+                    st.error("❌ 生成失敗，請再試")
+            else:
+                with st.spinner("🤖 重新生成緊..."):
+                    qs = generate_questions(material_path, subject, 5)
+                if qs:
+                    st.session_state.current_questions = qs
+                    st.session_state.current_material = material_choice
+                    st.session_state.grade_results = None
+                    st.session_state.current_cloze = None
+                    st.session_state.cloze_mode = False
+                    st.success("✅ 新一輪題目準備好！")
+                else:
+                    st.error("❌ 生成失敗，請再試")
 
     st.divider()
 
@@ -297,8 +458,73 @@ with st.sidebar:
 st.title("🦀 Openhing AI 練習室")
 st.caption("📖 教材出題 → ✍️ 即場作答 → 🤖 AI 批改改善")
 
-if not st.session_state.current_questions:
-    st.info("👆 左邊揀教材，然後撳「🎲 生成 5 條題目」開始！")
+if not st.session_state.current_questions and not st.session_state.current_cloze:
+    st.info("👆 左邊揀教材，然後撳「🎲 生成」開始！")
+    st.stop()
+
+# ===== 文章填空（Cloze）模式 =====
+if st.session_state.cloze_mode and st.session_state.current_cloze:
+    cloze = st.session_state.current_cloze
+    st.markdown(f"**📖 教材：** `{st.session_state.current_material}`　**📚 科目：** {subject}")
+    st.divider()
+    st.subheader("📖 文章填空訓練（Cloze）")
+    st.caption("🎯 從文章同教材搵出啱嘅詞語填空 — 由淺入深，加油！")
+
+    article = cloze.get("article", "")
+    article_disp = re.sub(r"（(\d+)）", r"＿＿＿（\1）＿＿＿", article)
+    st.markdown(article_disp)
+
+    word_bank = cloze.get("word_bank", [])
+    if word_bank:
+        st.markdown("**🧰 詞彙庫（Word Bank）：**　" + "　・　".join(word_bank))
+
+    blanks = cloze.get("blanks", [])
+    cloze_answers = {}
+    for b in blanks:
+        bid = b.get("id")
+        st.markdown(f"### （{bid}）")
+        cloze_answers[bid] = st.text_input(f"（{bid}）請填上適當詞語", key=f"cloze_{bid}", placeholder="打低你嘅答案⋯")
+        with st.expander(f"💡 提示（第 {bid} 題）"):
+            st.markdown(b.get("tip", ""))
+
+    submitted = st.button("🚀 提交批改", type="primary", use_container_width=True, disabled=not any(cloze_answers.values()))
+    if submitted:
+        api_base, api_key, model = get_api_config()
+        with st.spinner("🤖 AI 老師批改緊（約 10-20 秒）..."):
+            results, err = grade_cloze(cloze, cloze_answers, api_base, api_key, model)
+        if err:
+            st.error(err)
+        else:
+            st.session_state.grade_results = results
+            st.rerun()
+
+    if st.session_state.grade_results:
+        results = st.session_state.grade_results
+        st.markdown("---")
+        st.subheader("📊 批改結果")
+        correct_count = 0
+        for r in results:
+            bid = r.get("id", 0)
+            if bid == 0:
+                st.success(r.get("feedback", ""))
+                continue
+            if r.get("correct"):
+                correct_count += 1
+                st.markdown(f"✅ **（{bid}）** {r.get('feedback', '')}")
+            else:
+                st.markdown(f"❌ **（{bid}）** {r.get('feedback', '')}")
+        if correct_count:
+            st.success(f"🏆 答啱 **{correct_count} / {len(blanks)}** 題！")
+        st.info("💡 想再試？撳「🔄 新一輪」做新文章！")
+        if "practice_log" not in st.session_state:
+            st.session_state.practice_log = []
+        st.session_state.practice_log.append({
+            "時間": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "教材": st.session_state.current_material,
+            "模式": "文章填空",
+            "總分": correct_count,
+            "滿分": len(blanks),
+        })
     st.stop()
 
 # 顯示而家教材
@@ -354,7 +580,7 @@ if submitted:
         st.rerun()
 
 # 顯示批改結果
-if st.session_state.grade_results:
+if st.session_state.grade_results and not st.session_state.cloze_mode:
     results = st.session_state.grade_results
     st.markdown("---")
     st.subheader("📊 批改結果")
