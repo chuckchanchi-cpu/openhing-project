@@ -101,6 +101,12 @@ def generate_questions(material_path, subject, count=5):
 - "short"：短答題 — 一個詞、一個數字或一句句子
 - "long"：長答題 — 要解釋原因/寫步驟/發表看法（2-3 句以上）
 
+**技巧 + 陷阱要求（必須跟足，令訓練深入細緻、唔忽略細節）：**
+- 每條題目都要有「解題技巧（technique）」同「陷阱提示（trap）」兩個欄位
+- **陷阱設計**：MC 嘅錯誤選項要包含至少 1 個「陷阱選項」— 針對學生最常見嘅錯誤（例如：數學小數點位/單位換算錯、中文近義詞混淆、英文串法近似/固定搭配錯、忽略題目關鍵字「不」「最多」「大約」等）；短答/長答要喺「trap」欄提醒易錯位
+- **技巧設計**：每題喺「technique」欄寫清楚解題步驟/口訣/方法（例如：先圈關鍵字→列式→檢查單位；先睇空格前後詞性→再返教材搵）
+- 題目本身要考細節（數字、單位、關鍵字、詞語搭配），唔可以淨係表面答案就答到
+
 **難度階梯（必須跟足，第 1 題最簡單）：**
 - 第 1 題（⭐）：最簡單 — MC 選擇題，直接從教材搵到答案（記憶/辨認）
 - 第 2 題（⭐⭐）：簡單 — T/F 判斷題，基礎理解
@@ -125,6 +131,8 @@ def generate_questions(material_path, subject, count=5):
 - "answer": 正確答案（MC 寫正確選項嘅內容；T/F 寫「對」或「錯」；short/long 寫參考答案要點）
 - "difficulty": 難度級數（"⭐"/"⭐⭐"/"⭐⭐⭐"/"⭐⭐⭐⭐"/"⭐⭐⭐⭐⭐"）
 - "tip": 提示（引導學生思考，唔好直接俾答案）
+- "technique": 解題技巧（步驟/口訣/方法，書面語）
+- "trap": 陷阱提示（呢題最易錯嘅位/常見錯誤，書面語）
 - "rubric": 評分準則（4 項，每項 0-10 分，用廣東話/英文視乎科目）
 
 **輸出格式（只輸出 JSON array，唔好有其他文字）：**
@@ -137,7 +145,7 @@ def generate_questions(material_path, subject, count=5):
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"請根據教材生成 {count} 條每日溫習題目：混合題型（MC/判斷/短答/長答）、由淺入深、自然融入同學名、全部用教材內容！"}
+                {"role": "user", "content": f"請根據教材生成 {count} 條每日溫習題目：混合題型（MC/判斷/短答/長答）、由淺入深、自然融入同學名、每題附解題技巧同陷阱提醒、全部用教材內容！"}
             ],
             "max_tokens": 3000,
             "temperature": 0.8
@@ -165,6 +173,8 @@ def generate_questions(material_path, subject, count=5):
                     q["q"] = text  # 雙保險：q 同 question 都有
                     q.setdefault("rubric", RUBRIC_DEFAULT.get(subject, RUBRIC_FALLBACK))
                     q.setdefault("tip", "💡 諗下教材入面講過嘅重點")
+                    q.setdefault("technique", "")
+                    q.setdefault("trap", "")
                     q.setdefault("difficulty", "")
                     q.setdefault("type", "short")
                     q.setdefault("options", [])
@@ -213,6 +223,7 @@ def generate_cloze(material_path, subject):
 - **每個空格嘅答案 = 文章入面出現過嘅詞語**（目標詞彙之一）
 - **難度遞增**：前面嘅題目答案容易搵（喺文章開頭直接出現），後面嘅難（要理解文章先搵到）
 - 每題嘅 tip 一定要講「答案喺文章邊度搵」（例如：留意第 2 段關於動物庇護所嘅句子）
+- 每題要包含「揾詞技巧（technique）」同「陷阱（trap）」：technique 教學生點搵（例如：睇空格前後詞性、搵關鍵搭配詞、留意同義詞替換）；trap 提醒易錯位（例如：同義詞混淆、串法近似、抄錯字）
 
 **語言要求（必須跟足）：**
 - 英文科：文章、提示、答案全英文
@@ -222,7 +233,7 @@ def generate_cloze(material_path, subject):
 {{
   "article": "成篇文章（正常文章，冇空格）",
   "questions": [
-    {{"id": 1, "sentence": "新句子，空格用（1）標記", "answer": "答案詞語（必須喺文章出現過）", "tip": "書面語提示：答案喺文章邊度搵（例如：留意第 2 段關於……嘅句子）"}},
+    {{"id": 1, "sentence": "新句子，空格用（1）標記", "answer": "答案詞語（必須喺文章出現過）", "tip": "書面語提示：答案喺文章邊度搵（例如：留意第 2 段關於……嘅句子）", "technique": "揾詞技巧（例如：睇空格前詞性→搵搭配詞）", "trap": "易錯位提醒（例如：小心同義詞混淆）"}},
     ...
   ],
   "word_bank": ["詞1", "詞2", ...]（可選：答案詞語嘅詞彙庫，幫學生篩選）
@@ -256,6 +267,8 @@ def generate_cloze(material_path, subject):
         for b in qs:
             b.setdefault("sentence", "")
             b.setdefault("tip", "💡 答案喺文章入面，留意空格前後嘅意思，返文章搵")
+            b.setdefault("technique", "")
+            b.setdefault("trap", "")
             b.setdefault("answer", "")
         cloze["questions"] = qs
         return cloze
@@ -273,7 +286,7 @@ def grade_cloze(cloze, answers, api_base, api_key, model):
     for b in blanks:
         bid = b.get("id")
         student_ans = answers.get(bid, "").strip() or "（冇作答）"
-        lines.append(f"（{bid}）句子：{b.get('sentence','')}｜學生答案：{student_ans}｜正確答案：{b.get('answer','')}｜答案喺文章邊度：{b.get('tip','')}")
+        lines.append(f"（{bid}）句子：{b.get('sentence','')}｜學生答案：{student_ans}｜正確答案：{b.get('answer','')}｜答案喺文章邊度：{b.get('tip','')}｜揾詞技巧：{b.get('technique','')}｜易錯陷阱：{b.get('trap','')}")
     ans_text = "\n".join(lines)
     prompt = f"""你係一位專業同友善嘅小學老師。以下係「從文章中搵詞語填空」練習嘅學生答案同正確答案（學生要喺文章入面搵啱嘅詞語，填入新句子嘅空格），請逐題批改：
 
@@ -282,7 +295,7 @@ def grade_cloze(cloze, answers, api_base, api_key, model):
 請輸出 JSON array，每項對應一個空格：
 - "id": 空格編號
 - "correct": true/false（同正確答案一致先算啱；英文串法小錯可當啱但要喺評語提醒）
-- "feedback": 書面語評語（英文科用英文）— 啱：讚一句 + 簡單講點解係呢個詞；錯：話俾學生聽正確答案 + 點樣從文章搵（留意邊啲線索）
+- "feedback": 書面語評語（英文科用英文）— 啱：讚一句 + 簡單講點解係呢個詞；錯：話俾學生聽正確答案 + 點樣從文章搵（留意邊啲線索）；如果學生中咗陷阱（見每題陷阱），要指出嚟教佢避免
 - "total": 0 或 1
 
 最後加一項總結：{{"id": 0, "correct": true, "feedback": "總結：X/Y 題答啱，……（鼓勵說話，書面語）", "total": 0}}
@@ -325,6 +338,8 @@ def grade_all(questions, answers, api_base, api_key, model):
 正確答案（選擇/判斷題適用）：{q.get('answer', '冇提供')}
 評分準則（每項 0-10 分）：
 {q['rubric']}
+技巧：{q.get('technique', '冇提供')}
+陷阱：{q.get('trap', '冇提供')}
 學生答案：
 \"\"\"
 {a}
@@ -333,7 +348,7 @@ def grade_all(questions, answers, api_base, api_key, model):
 """
 
     prompt = f"""你係一個專業同友善嘅小學老師。根據每題嘅評分準則，逐題批改學生嘅答案，評語全部用正式書面語（英文科題目可用英文），語氣鼓勵為主。
-選擇題/判斷題：直接對「正確答案」判斷對錯（揀啱就滿分，揀錯就 0 分）；短答/長答：按評分準則評分。
+選擇題/判斷題：直接對「正確答案」判斷對錯（揀啱就滿分，揀錯就 0 分）；短答/長答：按評分準則評分。如果學生答錯係因為中咗題目「陷阱」（見每題陷阱欄），評語要明確指出嚟，教佢下次點避免；答啱嘅可以讚佢避開咗陷阱。
 
 {qa_block}
 請用以下 JSON 格式回覆（唔好加其他文字）：
@@ -497,6 +512,10 @@ if st.session_state.cloze_mode and st.session_state.current_cloze:
         cloze_answers[bid] = st.text_input(f"（{bid}）請從文章中揾出適當詞語填入", key=f"cloze_{bid}", placeholder="打低你嘅答案⋯")
         with st.expander(f"💡 提示（第 {bid} 題）"):
             st.markdown(b.get("tip", ""))
+            if b.get("technique"):
+                st.markdown(f"🛠️ **技巧：** {b['technique']}")
+            if b.get("trap"):
+                st.markdown(f"⚠️ **陷阱：** {b['trap']}")
 
     submitted = st.button("🚀 提交批改", type="primary", use_container_width=True, disabled=not any(cloze_answers.values()))
     if submitted:
@@ -547,7 +566,7 @@ answers = {}
 
 # 顯示題目 + 作答區
 st.subheader(f"📝 每日溫習（{len(questions)} 條題目）")
-st.caption("🎯 混合題型 + 由淺入深：第 1 題最簡單，越後越有挑戰性 — 加油！")
+st.caption("🎯 混合題型 + 由淺入深 + 每題拆解技巧陷阱：第 1 題最簡單，越後越有挑戰性 — 加油！")
 TYPE_BADGE = {"MC": "🔘 選擇題", "T/F": "⚖️ 判斷題", "short": "✏️ 短答", "long": "📝 長答"}
 for i, q in enumerate(questions):
     diff = q.get("difficulty", "")
@@ -556,6 +575,10 @@ for i, q in enumerate(questions):
     st.markdown(f"### {i+1}. {q_text(q)}　{diff}　{badge}")
     with st.expander("💡 提示（撳開睇）"):
         st.markdown(q.get("tip", ""))
+        if q.get("technique"):
+            st.markdown(f"🛠️ **技巧：** {q['technique']}")
+        if q.get("trap"):
+            st.markdown(f"⚠️ **陷阱：** {q['trap']}")
     if qtype == "MC":
         options = q.get("options") or []
         if options:
