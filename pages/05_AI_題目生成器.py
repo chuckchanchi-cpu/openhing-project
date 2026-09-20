@@ -149,7 +149,7 @@ def generate_questions(material_path, subject, count=5):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"請根據教材生成 {count} 條每日溫習題目：混合題型（MC/判斷/短答/長答）、由淺入深、自然融入同學名、每題附解題技巧同陷阱提醒、全部用教材內容！"}
             ],
-            "max_tokens": 3000,
+            "max_tokens": 6000,
             "temperature": 0.8
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -165,7 +165,16 @@ def generate_questions(material_path, subject, count=5):
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
-            questions = json.loads(content)
+            try:
+                questions = json.loads(content)
+            except json.JSONDecodeError:
+                # AI 有時會加雜質文字 → 嘗試抽取 JSON 部分
+                m = re.search(r'[\[{].*[\]}]', content, re.S)
+                if not m:
+                    raise
+                questions = json.loads(m.group(0))
+            if isinstance(questions, dict):
+                questions = questions.get("questions", [])
             # 淨係留有效題目 + 補 rubric
             valid = []
             for q in questions:
@@ -182,6 +191,9 @@ def generate_questions(material_path, subject, count=5):
                     q.setdefault("options", [])
                     q.setdefault("answer", "")
                     valid.append(q)
+            if not valid:
+                st.error("❌ AI 回覆格式唔啱（冇有效題目）— 請再試一次")
+                return []
             return valid
         except json.JSONDecodeError:
             st.error("❌ AI 回覆格式唔啱（唔係 JSON）— 請再試一次")
@@ -249,7 +261,7 @@ def generate_cloze(material_path, subject):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "請根據教材生成：一篇短文 + 4-6 條新填充題（答案要喺文章入面搵到），全部用教材內容！"}
             ],
-            "max_tokens": 3000,
+            "max_tokens": 6000,
             "temperature": 0.8
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -258,12 +270,20 @@ def generate_cloze(material_path, subject):
             st.error(f"❌ AI 生成失敗（錯誤碼 {response.status_code}）：{response.text[:200]}")
             return None
         content = response.json()["choices"][0]["message"]["content"]
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        cloze = json.loads(content)
-        if not cloze.get("article") or not (cloze.get("questions") or cloze.get("blanks")):
+        try:
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+            cloze = json.loads(content)
+        except json.JSONDecodeError:
+            # AI 有時會加雜質文字 → 嘗試抽取 JSON 部分
+            m = re.search(r'\{.*\}', content, re.S)
+            if not m:
+                st.error("❌ AI 回覆格式唔啱（唔係 JSON）— 請再試一次")
+                return None
+            cloze = json.loads(m.group(0))
+        if not isinstance(cloze, dict) or not cloze.get("article") or not (cloze.get("questions") or cloze.get("blanks")):
             st.error("❌ AI 回覆格式唔啱（缺 article/questions）— 請再試一次")
             return None
         cloze.setdefault("word_bank", [])
