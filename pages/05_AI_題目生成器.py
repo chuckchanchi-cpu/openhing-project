@@ -41,6 +41,34 @@ def get_api_config():
         base = "https://api.deepseek.com"
     return base, key, model
 
+
+# ===== AI JSON 解析（fence 清理 + LaTeX 符號轉換 + 雜質文字抽取）=====
+def parse_ai_json(content):
+    """將 AI 回覆轉成 Python object；失敗回傳 None"""
+    if not content:
+        return None
+    if "```json" in content:
+        content = content.split("```json")[1].split("```")[0].strip()
+    elif "```" in content:
+        content = content.split("```")[1].split("```")[0].strip()
+    # LaTeX/backslash 清理（模型有時用 \div \times \frac → 非法 JSON escape）
+    content = re.sub(r"\\frac\{([^}]*)\}\{([^}]*)\}", r"(\1)/(\2)", content)
+    for tok, rep in [("\\div", "÷"), ("\\times", "×"), ("\\cdot", "·"), ("\\pm", "±"),
+                     ("\\le", "≤"), ("\\ge", "≥"), ("\\neq", "≠"), ("\\%", "%"),
+                     ("\\times", "×")]:
+        content = content.replace(tok, rep)
+    content = content.replace("$", "")
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        m = re.search(r'[\[{].*[\]}]', content, re.S)
+        if not m:
+            return None
+        try:
+            return json.loads(m.group(0))
+        except json.JSONDecodeError:
+            return None
+
 # ===== 科目 rubric 預設（AI 冇俾 rubric 時用）=====
 RUBRIC_DEFAULT = {
     "中文": "- 內容（Content）：主題相關、有細節\n- 結構（Structure）：有開頭/中間/結尾\n- 用詞（Vocabulary）：用詞豐富\n- 標點（Punctuation）：標點正確",
@@ -123,6 +151,7 @@ def generate_questions(material_path, subject, count=5):
 
 **語言要求（必須跟足）：**
 - 所有「題目內容（question）」「提示（tip）」「評分準則（rubric）」必須用**正式書面語**（學校測驗卷風格），嚴禁口語、廣東話、網絡用語
+- **嚴禁 LaTeX/反斜線符號**（\\div、\\times、\\frac 等）— 數學符號用「÷」「×」「/」或文字描述（例如：「90.1 ÷ 1000」），千祈唔好用「$...$」格式
 - 英文科：題目、提示、評分準則用英文；其他科目用書面語中文
 - 同學名可以照用，但句子要正式（例如：「皓一有 28.4 元，他想購買每枝售價 7.8 元的雪條，他最多可以購買多少枝？」）
 
@@ -161,18 +190,9 @@ def generate_questions(material_path, subject, count=5):
 
         content = response.json()["choices"][0]["message"]["content"]
         try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-            try:
-                questions = json.loads(content)
-            except json.JSONDecodeError:
-                # AI 有時會加雜質文字 → 嘗試抽取 JSON 部分
-                m = re.search(r'[\[{].*[\]}]', content, re.S)
-                if not m:
-                    raise
-                questions = json.loads(m.group(0))
+            questions = parse_ai_json(content)
+            if questions is None:
+                raise json.JSONDecodeError("no json", content, 0)
             if isinstance(questions, dict):
                 questions = questions.get("questions", [])
             # 淨係留有效題目 + 補 rubric
@@ -270,19 +290,10 @@ def generate_cloze(material_path, subject):
             st.error(f"❌ AI 生成失敗（錯誤碼 {response.status_code}）：{response.text[:200]}")
             return None
         content = response.json()["choices"][0]["message"]["content"]
-        try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-            cloze = json.loads(content)
-        except json.JSONDecodeError:
-            # AI 有時會加雜質文字 → 嘗試抽取 JSON 部分
-            m = re.search(r'\{.*\}', content, re.S)
-            if not m:
-                st.error("❌ AI 回覆格式唔啱（唔係 JSON）— 請再試一次")
-                return None
-            cloze = json.loads(m.group(0))
+        cloze = parse_ai_json(content)
+        if cloze is None:
+            st.error("❌ AI 回覆格式唔啱（唔係 JSON）— 請再試一次")
+            return None
         if not isinstance(cloze, dict) or not cloze.get("article") or not (cloze.get("questions") or cloze.get("blanks")):
             st.error("❌ AI 回覆格式唔啱（缺 article/questions）— 請再試一次")
             return None
@@ -339,11 +350,10 @@ def grade_cloze(cloze, answers, api_base, api_key, model):
         if response.status_code != 200:
             return None, f"❌ AI 批改失敗（錯誤碼 {response.status_code}）：{response.text[:200]}"
         content = response.json()["choices"][0]["message"]["content"]
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        return json.loads(content), None
+        parsed = parse_ai_json(content)
+        if parsed is None:
+            return None, "❌ AI 批改回覆格式唔啱（唔係 JSON）— 請再試一次"
+        return parsed, None
     except Exception as e:
         return None, f"❌ 批改出錯：{str(e)}"
 
@@ -401,10 +411,10 @@ def grade_all(questions, answers, api_base, api_key, model):
         if r.status_code != 200:
             return None, f"API Error {r.status_code}: {r.text[:200]}"
         content = r.json()["choices"][0]["message"]["content"].strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1].rsplit("```", 1)[0]
-        data = json.loads(content)
-        results = data.get("results", [])
+        data = parse_ai_json(content)
+        if data is None:
+            return None, "❌ AI 批改回覆格式唔啱（唔係 JSON）— 請再試一次"
+        results = data.get("results", []) if isinstance(data, dict) else []
         if not results and isinstance(data, list):
             results = data
         return results, None
