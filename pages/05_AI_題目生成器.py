@@ -18,8 +18,10 @@ import glob
 import io
 import requests
 import re
+import ast
 import pandas as pd
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 
 st.set_page_config(page_title="🦀 Openhing AI 練習室", page_icon="🦀", layout="wide")
 
@@ -99,6 +101,91 @@ def q_text(q):
     """攞題目文字 — AI 可能用唔同 key，全部 fallback"""
     return (q.get('question') or q.get('title') or q.get('content')
             or q.get('text') or q.get('question_text') or '').strip()
+
+# ===== 🧮 計數機（唔使紙筆）=====
+def _safe_eval(expr):
+    """安全算式計算：只接受數字、+ - * / ( ) 小數點（防注入）"""
+    if not expr or not isinstance(expr, str):
+        return None
+    s = expr.replace("÷", "/").replace("×", "*").replace("−", "-").replace(" ", "")
+    if not s or not re.fullmatch(r"[0-9+\-*/().]+", s):
+        return None
+    try:
+        tree = ast.parse(s, mode="eval")
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant):
+                if not isinstance(node.value, (int, float)):
+                    return None
+            elif not isinstance(node, (ast.Expression, ast.BinOp, ast.UnaryOp,
+                                       ast.Add, ast.Sub, ast.Mult, ast.Div,
+                                       ast.USub, ast.UAdd, ast.Load)):
+                return None
+        return eval(compile(tree, "<calc>", "eval"), {"__builtins__": {}}, {})
+    except Exception:
+        return None
+
+def _round_half_up(x, digits):
+    """小學四捨五入（半進位制，唔係銀行家捨入）"""
+    q = Decimal("1." + "0" * digits) if digits > 0 else Decimal("1")
+    return float(Decimal(str(x)).quantize(q, rounding=ROUND_HALF_UP))
+
+def _fmt_num(x):
+    """數字靚仔格式：整數冇小數點，浮點數去尾零"""
+    if x is None:
+        return ""
+    if isinstance(x, int):
+        return str(x)
+    if isinstance(x, float):
+        if x == int(x) and abs(x) < 1e15:
+            return str(int(x))
+        return f"{x:.10f}".rstrip("0").rstrip(".")
+    return str(x)
+
+def render_calculator():
+    """🧮 計數機 + 四捨五入助手（車程冇紙筆都用得）"""
+    with st.expander("🧮 計數機（唔使紙筆）", expanded=False):
+        st.caption("㩒掣入算式，或者直接打字都得 — 例：`(3.2+6.4)*4/2`")
+        if "calc_expr" not in st.session_state:
+            st.session_state.calc_expr = ""
+
+        pad = [["7", "8", "9", "÷"],
+               ["4", "5", "6", "×"],
+               ["1", "2", "3", "−"],
+               ["0", ".", "(", ")"],
+               ["⌫", "C", "=", ""]]
+        for row in pad:
+            cols = st.columns(4)
+            for i, k in enumerate(row):
+                if not k:
+                    continue
+                if cols[i].button(k, key=f"calc_{k}", use_container_width=True):
+                    if k == "⌫":
+                        st.session_state.calc_expr = st.session_state.calc_expr[:-1]
+                    elif k == "C":
+                        st.session_state.calc_expr = ""
+                    elif k == "=":
+                        val = _safe_eval(st.session_state.calc_expr)
+                        st.session_state.calc_expr = "" if val is None else _fmt_num(val)
+                    else:
+                        st.session_state.calc_expr += {"÷": "/", "×": "*", "−": "-"}.get(k, k)
+                    st.rerun()
+
+        expr = st.session_state.calc_expr
+        st.markdown(f"**算式：** `{expr or '（未輸入）'}`")
+        val = _safe_eval(expr)
+        if expr:
+            if val is None:
+                st.warning("⚠️ 算式未完整／有唔啱嘅嘢 — 檢查下括號同數字")
+            else:
+                st.success(f"**= {_fmt_num(val)}**")
+
+        st.divider()
+        st.caption("🔢 四捨五入助手（取至…）")
+        rn = st.number_input("數字", value=0.0, step=0.1, format="%.4f", key="calc_round_num")
+        rd = st.selectbox("取至", ["個位", "十分位", "百分位", "千分位"], key="calc_round_digit")
+        _digits = {"個位": 0, "十分位": 1, "百分位": 2, "千分位": 3}[rd]
+        rv = _round_half_up(rn, _digits)
+        st.success(f"**{_fmt_num(rn)}** 四捨五入至 **{rd}** = **{_fmt_num(rv)}**")
 
 # ===== AI 生成題目（根據教材）=====
 def generate_questions(material_path, subject, count=5):
@@ -500,6 +587,10 @@ with st.sidebar:
                     st.success("✅ 新一輪題目準備好！")
                 else:
                     st.error("❌ 生成失敗，請再試")
+
+    st.divider()
+
+    render_calculator()
 
     st.divider()
 
