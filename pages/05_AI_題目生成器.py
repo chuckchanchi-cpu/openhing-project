@@ -59,6 +59,9 @@ def parse_ai_json(content):
                      ("\\le", "≤"), ("\\ge", "≥"), ("\\neq", "≠"), ("\\%", "%"),
                      ("\\times", "×")]:
         content = content.replace(tok, rep)
+    # 清除剩餘嘅 LaTeX 指令（\approx \text \left \right \mathrm...）→ 防止非法 JSON escape
+    content = re.sub(r"\\[a-zA-Z]+", "", content)
+    content = content.replace("\\ ", " ").replace("\\{", "{").replace("\\}", "}")
     content = content.replace("$", "")
     try:
         return json.loads(content)
@@ -278,12 +281,13 @@ def generate_questions(material_path, subject, count=5):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"請根據教材生成 {count} 條每日溫習題目：混合題型（MC/判斷/短答/長答）、由淺入深、自然融入同學名、每題附解題技巧同陷阱提醒、全部用教材內容！"}
             ],
-            "max_tokens": 6000,
-            "temperature": 0.8
+            "max_tokens": 12000,
+            "temperature": 0.8,
+            "enable_thinking": False
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=180)
+        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=300)
         if response.status_code != 200:
             st.error(f"❌ AI 生成失敗（錯誤碼 {response.status_code}）：{response.text[:200]}")
             return []
@@ -381,11 +385,12 @@ def generate_cloze(material_path, subject):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "請根據教材生成：一篇短文 + 4-6 條新填充題（答案要喺文章入面搵到），全部用教材內容！"}
             ],
-            "max_tokens": 6000,
-            "temperature": 0.8
+            "max_tokens": 12000,
+            "temperature": 0.8,
+            "enable_thinking": False
         }
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=180)
+        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=300)
         if response.status_code != 200:
             st.error(f"❌ AI 生成失敗（錯誤碼 {response.status_code}）：{response.text[:200]}")
             return None
@@ -442,11 +447,12 @@ def grade_cloze(cloze, answers, api_base, api_key, model):
             {"role": "user", "content": prompt}
         ],
         "max_tokens": 2000,
-        "temperature": 0.3
+        "temperature": 0.3,
+        "enable_thinking": False
     }
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     try:
-        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=180)
+        response = requests.post(f"{api_base}/chat/completions", json=payload, headers=headers, timeout=300)
         if response.status_code != 200:
             return None, f"❌ AI 批改失敗（錯誤碼 {response.status_code}）：{response.text[:200]}"
         content = response.json()["choices"][0]["message"]["content"]
@@ -503,10 +509,11 @@ def grade_all(questions, answers, api_base, api_key, model):
                 ],
                 "max_tokens": 3000,
                 "temperature": 0.3,
+                "enable_thinking": False,
                 "response_format": {"type": "json_object"}
             },
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=180
+            timeout=300
         )
         if r.status_code != 200:
             return None, f"API Error {r.status_code}: {r.text[:200]}"
@@ -550,7 +557,7 @@ with st.sidebar:
 
     if st.button("🎲 生成文章+填充題" if is_cloze else "🎲 生成 5 條題目", type="primary", use_container_width=True):
         if is_cloze:
-            with st.spinner(f"🤖 根據《{material_choice}》生成緊文章填空..."):
+            with st.spinner(f"🤖 根據《{material_choice}》生成緊文章填空（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
                 cloze = generate_cloze(material_path, subject)
             if cloze:
                 st.session_state.current_cloze = cloze
@@ -562,7 +569,7 @@ with st.sidebar:
             else:
                 st.error("❌ 生成失敗，請再試")
         else:
-            with st.spinner(f"🤖 根據《{material_choice}》生成緊 5 條題目..."):
+            with st.spinner(f"🤖 根據《{material_choice}》生成緊 5 條題目（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
                 qs = generate_questions(material_path, subject, 5)
             if qs:
                 st.session_state.current_questions = qs
@@ -577,7 +584,7 @@ with st.sidebar:
     if st.session_state.current_questions or st.session_state.current_cloze:
         if st.button("🔄 新一輪（重新生成）", use_container_width=True):
             if is_cloze:
-                with st.spinner("🤖 重新生成緊..."):
+                with st.spinner("🤖 重新生成緊（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
                     cloze = generate_cloze(material_path, subject)
                 if cloze:
                     st.session_state.current_cloze = cloze
@@ -589,7 +596,7 @@ with st.sidebar:
                 else:
                     st.error("❌ 生成失敗，請再試")
             else:
-                with st.spinner("🤖 重新生成緊..."):
+                with st.spinner("🤖 重新生成緊（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
                     qs = generate_questions(material_path, subject, 5)
                 if qs:
                     st.session_state.current_questions = qs
