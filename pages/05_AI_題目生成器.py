@@ -191,7 +191,7 @@ def render_calculator():
         st.success(f"**{_fmt_num(rn)}** 四捨五入至 **{rd}** = **{_fmt_num(rv)}**")
 
 # ===== AI 生成題目（根據教材）=====
-def generate_questions(material_path, subject, count=5):
+def generate_questions(material_path, subject, count=5, story_mode=False):
     api_base, api_key, model = get_api_config()
     if not api_key:
         st.error("⚠️ 未偵測到 API key — 請老師喺 Streamlit Cloud Secrets 設定 OPENAI_API_KEY")
@@ -210,6 +210,17 @@ def generate_questions(material_path, subject, count=5):
 4. **概念照樣要考足** — 數字簡單但概念唔可以淺：小數除法「除數變整數」、向上／向下取整、單位換算、四捨五入、應用題關鍵詞判斷（最多／最少／餘下／足夠）全部要覆蓋
 5. **應用題情境數字要實際** — 例如「40 元買每卷 5.2 元嘅絲帶，最多買幾卷？找回幾多？」（40÷5.2→7.69→7卷、找 3.6）
 6. **MC 陷阱選項照舊** — 錯選項要係學生常見錯誤（小數點位錯、取整方向錯、單位換算錯），唔可以因為數字簡單就取消陷阱
+"""
+
+        story_block = ""
+        if story_mode:
+            story_block = """
+**🌟 故事化包裝模式（開啟時必須跟足）：**
+1. 用「嫦娥奔月・月餅能量篇」式嘅科普故事風格包裝每條題目：廣東話旁白、活潑幽默、有角色有劇情（嫦娥、玉兔，或教材相關角色）、生活化比喻（例如「要食幾多個月餅先夠Energy？」）、適量 emoji（🌕🐰🥮🔥）
+2. 每題開頭先寫 1-3 句故事情境（廣東話），再引入正式題目；**故事旁白可用廣東話口語，但題目、選項、答案、技巧、陷阱必須保持正式書面語**（學校測驗卷風格）
+3. 故事例子唔可以用教材以外嘅事實（例如唔可以自加教材冇嘅動物/人物/數字）— 【鐵律不變：知識點 100% 來自教材，只准用教材內容出題】
+4. 包裝唔可以改變答案、計算或題目要求
+5. 5 條題目盡量串成一個連貫小故事（角色一路冒險，由淺入深），最後一題結尾加一句幽默反轉或趣味總結（例如：「如果嫦娥真係食完 960 個月餅，佢仲係咪 50 kg？🤭」）
 """
 
         system_prompt = f"""你係一位經驗豐富嘅小學六年級{subject}科老師。
@@ -257,7 +268,7 @@ def generate_questions(material_path, subject, count=5):
 - **嚴禁 LaTeX/反斜線符號**（\\div、\\times、\\frac 等）— 數學符號用「÷」「×」「/」或文字描述（例如：「90.1 ÷ 1000」），千祈唔好用「$...$」格式
 - 英文科：題目、提示、評分準則用英文；其他科目用書面語中文
 - 同學名可以照用，但句子要正式（例如：「皓一有 28.4 元，他想購買每枝售價 7.8 元的雪條，他最多可以購買多少枝？」）
-
+{story_block}
 **每條題目包含：**
 - "question": 題目內容（書面語）
 - "type": "MC" / "T/F" / "short" / "long"
@@ -554,6 +565,9 @@ with st.sidebar:
 
     train_mode = st.radio("訓練模式", ["🎯 每日溫習（混合題型）", "📖 文章填充（從文章搵詞）"], key="train_mode")
     is_cloze = train_mode.startswith("📖")
+    story_mode = False
+    if not is_cloze:
+        story_mode = st.checkbox("🌟 嫦娥奔月式故事化包裝（廣東話故事 + 書面語題目，內容 100% 教材）", key="story_mode", value=False)
 
     if st.button("🎲 生成文章+填充題" if is_cloze else "🎲 生成 5 條題目", type="primary", use_container_width=True):
         if is_cloze:
@@ -570,7 +584,7 @@ with st.sidebar:
                 st.error("❌ 生成失敗，請再試")
         else:
             with st.spinner(f"🤖 根據《{material_choice}》生成緊 5 條題目（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
-                qs = generate_questions(material_path, subject, 5)
+                qs = generate_questions(material_path, subject, 5, story_mode)
             if qs:
                 st.session_state.current_questions = qs
                 st.session_state.current_material = material_choice
@@ -597,7 +611,7 @@ with st.sidebar:
                     st.error("❌ 生成失敗，請再試")
             else:
                 with st.spinner("🤖 重新生成緊（約 1-3 分鐘，AI 諗緊唔好關頁）..."):
-                    qs = generate_questions(material_path, subject, 5)
+                    qs = generate_questions(material_path, subject, 5, story_mode)
                 if qs:
                     st.session_state.current_questions = qs
                     st.session_state.current_material = material_choice
