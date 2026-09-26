@@ -54,23 +54,37 @@ def parse_ai_json(content):
     elif "```" in content:
         content = content.split("```")[1].split("```")[0].strip()
     # LaTeX/backslash 清理（模型有時用 \div \times \frac → 非法 JSON escape）
+    # 第一步：collapse 雙反斜線（模型會將字面 \div 寫成 \\div）→ 變返單 \ 等 map 處理
+    content = content.replace("\\\\", "\\")
     content = re.sub(r"\\frac\{([^}]*)\}\{([^}]*)\}", r"(\1)/(\2)", content)
     for tok, rep in [("\\div", "÷"), ("\\times", "×"), ("\\cdot", "·"), ("\\pm", "±"),
                      ("\\le", "≤"), ("\\ge", "≥"), ("\\neq", "≠"), ("\\%", "%"),
                      ("\\times", "×")]:
         content = content.replace(tok, rep)
     # 清除剩餘嘅 LaTeX 指令（\approx \text \left \right \mathrm...）→ 防止非法 JSON escape
-    content = re.sub(r"\\[a-zA-Z]+", "", content)
+    # lookahead 確保唔會連後面嘅英文字母（例如 \nA. 嘅 A）一齊食走；(?!u) 保護 \uXXXX unicode escape
+    content = re.sub(r"\\(?!n|t|r|f|b|u[0-9a-fA-F]{4}|/|\"|\\\\|')[a-zA-Z]+", "", content)
+    # 反斜線+符號（\÷ \× \≈ 等）→ 直接去返斜線（呢啲都係非法 JSON escape）
+    content = re.sub(r"\\([^nrtbfu/\"\\0-9])", r"\1", content)
     content = content.replace("\\ ", " ").replace("\\{", "{").replace("\\}", "}")
     content = content.replace("$", "")
+    def _unwrap(obj):
+        # 模型有時會包多層（例如 {"questions": [...]}）→ 自動拆返個 array 出嚟
+        if isinstance(obj, dict):
+            for k in ("questions", "question", "題目", "data", "quiz", "items", "results", "exercises"):
+                v = obj.get(k)
+                if isinstance(v, list):
+                    return v
+        return obj
+
     try:
-        return json.loads(content)
+        return _unwrap(json.loads(content))
     except json.JSONDecodeError:
         m = re.search(r'[\[{].*[\]}]', content, re.S)
         if not m:
             return None
         try:
-            return json.loads(m.group(0))
+            return _unwrap(json.loads(m.group(0)))
         except json.JSONDecodeError:
             return None
 
@@ -216,11 +230,12 @@ def generate_questions(material_path, subject, count=5, story_mode=False):
         if story_mode:
             story_block = """
 **🌟 故事化包裝模式（開啟時必須跟足）：**
-1. 用「嫦娥奔月・月餅能量篇」式嘅科普故事風格包裝每條題目：廣東話旁白、活潑幽默、有角色有劇情（嫦娥、玉兔，或教材相關角色）、生活化比喻（例如「要食幾多個月餅先夠Energy？」）、適量 emoji（🌕🐰🥮🔥）
-2. 每題開頭先寫 1-3 句故事情境（廣東話），再引入正式題目；**故事旁白可用廣東話口語，但題目、選項、答案、技巧、陷阱必須保持正式書面語**（學校測驗卷風格）
-3. 故事例子唔可以用教材以外嘅事實（例如唔可以自加教材冇嘅動物/人物/數字）— 【鐵律不變：知識點 100% 來自教材，只准用教材內容出題】
-4. 包裝唔可以改變答案、計算或題目要求
-5. 5 條題目盡量串成一個連貫小故事（角色一路冒險，由淺入深），最後一題結尾加一句幽默反轉或趣味總結（例如：「如果嫦娥真係食完 960 個月餅，佢仲係咪 50 kg？🤭」）
+1. 用「嫦娥奔月・月餅能量篇」嘅**科普故事化 vibe**包裝每條題目：廣東話旁白、活潑幽默、有角色有劇情、生活化比喻（例如「要食幾多個月餅先夠Energy？」）、適量 emoji（🌕🐰🥮🔥🚀🕵️⚽）
+2. **主題唔限中秋/嫦娥** — 可以係太空探險、神話傳說（孫悟空/后羿/女媧）、森林歷險、偵探查案、運動比賽、校園生活、發明家故事……每輪揀一個新鮮主題，千祈唔好次次都用嫦娥奔月；教材本身有合適角色/情境（如鬼滅角色、同學名）可以自然融入
+3. 每題開頭先寫 1-3 句故事情境（廣東話），再引入正式題目；**故事旁白可用廣東話口語，但題目、選項、答案、技巧、陷阱必須保持正式書面語**（學校測驗卷風格）
+4. 故事例子唔可以用教材以外嘅事實（例如唔可以自加教材冇嘅動物/人物/數字）— 【鐵律不變：知識點 100% 來自教材，只准用教材內容出題】
+5. 包裝唔可以改變答案、計算或題目要求
+6. 5 條題目盡量串成一個連貫小故事（角色一路冒險，由淺入深），最後一題結尾加一句幽默反轉或趣味總結（例如：「如果主角真係食完 960 個月餅，佢仲係咪 50 kg？🤭」）
 """
 
         system_prompt = f"""你係一位經驗豐富嘅小學六年級{subject}科老師。
