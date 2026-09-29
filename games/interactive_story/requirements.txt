@@ -1,4 +1,0 @@
-streamlit>=1.31.0
-requests>=2.31.0
-gtts>=2.5.0
-edge-tts>=6.1.0
