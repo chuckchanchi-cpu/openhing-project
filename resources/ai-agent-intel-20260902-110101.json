@@ -1,0 +1,178 @@
+[
+  {
+    "query": "CrewAI vs AutoGen vs LangChain 2026 comparison",
+    "results": [
+      {
+        "title": "AutoGen vs. LangGraph vs. CrewAI: A Production ...",
+        "link": "https://python.plainenglish.io/autogen-vs-langgraph-vs-crewai-a-production-engineers-honest-comparison-d557b3b9262c",
+        "snippet": "AutoGen vs. LangGraph vs. CrewAI: A Production Engineer's Honest Comparison · A research agent that queries multiple APIs, refines answers, and ...",
+        "date": "May 12, 2025",
+        "position": 1
+      },
+      {
+        "title": "First hand comparison of LangGraph, CrewAI and AutoGen",
+        "link": "https://aaronyuqi.medium.com/first-hand-comparison-of-langgraph-crewai-and-autogen-30026e60b563",
+        "snippet": "I compared developer experience, startup complexity, state management, agent framework adaptability, and more. However, I didn't have time to ...",
+        "position": 2
+      },
+      {
+        "title": "Autogen vs LangChain vs CrewAI",
+        "link": "https://www.instinctools.com/blog/autogen-vs-langchain-vs-crewai/",
+        "snippet": "LangChain gets updated daily to weekly. AutoGen's release cadence is slower compared to LangChain – roughly monthly or per milestone. CrewAI ...",
+        "date": "Jul 31, 2025",
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "best multi-agent framework 2026",
+    "results": [
+      {
+        "title": "Top AI Agent Frameworks in 2026: A Production-Ready ...",
+        "link": "https://pub.towardsai.net/top-ai-agent-frameworks-in-2026-a-production-ready-comparison-7ba5e39ad56d",
+        "snippet": "AutoGen is Microsoft Research's multi-agent conversation framework, rebuilt from scratch in version 2.0. The core concept: agents ...",
+        "date": "Apr 1, 2026",
+        "position": 1
+      },
+      {
+        "title": "The best AI agent frameworks in 2026",
+        "link": "https://www.langchain.com/resources/ai-agent-frameworks",
+        "snippet": "This guide compares seven frameworks: LangChain, CrewAI, Microsoft Agent Framework, LlamaIndex Workflows, Google ADK, OpenAI Agents SDK, and ...",
+        "date": "Jun 6, 2026",
+        "position": 2
+      },
+      {
+        "title": "Best Multi-Agent Frameworks in 2026: LangGraph, CrewAI ...",
+        "link": "https://gurusup.com/blog/best-multi-agent-frameworks-2026",
+        "snippet": "Compare the 6 leading multi-agent frameworks: OpenAI Agents SDK, LangGraph, CrewAI, AutoGen/AG2, Google ADK.",
+        "date": "May 2, 2026",
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "CrewAI review 2026",
+    "results": [
+      {
+        "title": "CrewAI review 2026: my honest verdict on multi-agent AI",
+        "link": "https://cybernews.com/ai-tools/crewai-review/",
+        "snippet": "Based on my experience, CrewAI is best for multi-agent task delegation in complex research-and-execute pipelines and automating structured ...",
+        "date": "May 28, 2026",
+        "position": 1
+      },
+      {
+        "title": "Latest topics",
+        "link": "https://community.crewai.com/latest",
+        "snippet": "Can AI Agents help small businesses answer repetitive customer questions? CrewAI Community Support. 3, 246, August 16, 2026.",
+        "position": 2
+      },
+      {
+        "title": "CrewAI Review 2026: Is It Really Worth Your Money?",
+        "link": "https://www.lindy.ai/blog/crew-ai",
+        "snippet": "CrewAI is one of the more expensive AI tools on the market. Its cheapest version costs $99/month, while its steepest tier costs an eye-watering ...",
+        "date": "Feb 24, 2025",
+        "rating": 4.9,
+        "ratingCount": 171,
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "AutoGen Microsoft framework review",
+    "results": [
+      {
+        "title": "Why are people using Microsoft AutoGen vs other agentic ...",
+        "link": "https://www.reddit.com/r/AutoGenAI/comments/1ig33yz/why_are_people_using_microsoft_autogen_vs_other/",
+        "snippet": "I'm trying to understand more, what are your use cases? why not use another platform?",
+        "date": "1 year ago",
+        "position": 1
+      },
+      {
+        "title": "AutoGen vs Microsoft Agent Framework: Comparison 2025",
+        "link": "https://createaiagent.net/autogen-vs-microsoft-agent-framework/",
+        "snippet": "In short, AutoGen is perfect for innovation and flexibility, while the Microsoft Agent Framework brings structure, reliability, and enterprise ...",
+        "date": "Oct 29, 2025",
+        "position": 2
+      },
+      {
+        "title": "microsoft/autogen: A programming framework for agentic AI",
+        "link": "https://github.com/microsoft/autogen",
+        "snippet": "AutoGen is a framework for creating multi-agent AI applications that can act autonomously or work alongside humans. ... AutoGen is now in maintenance mode. It ...",
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "LangChain LangGraph multi-agent",
+    "results": [
+      {
+        "title": "Multi-agent - Docs by LangChain",
+        "link": "https://docs.langchain.com/oss/python/langchain/multi-agent",
+        "snippet": "Multi-agent systems coordinate specialized components to tackle complex workflows. However, not every complex task requires this approach—a single agent with ...",
+        "position": 1
+      },
+      {
+        "title": "Graph API overview - Docs by LangChain",
+        "link": "https://docs.langchain.com/oss/python/langgraph/graph-api",
+        "snippet": "LangGraph models agent workflows as graphs. You define the behavior of your agents using three key components: State : useful when implementing multi-agent ...",
+        "position": 2
+      },
+      {
+        "title": "LangGraph: Agent Orchestration Framework for Reliable AI ...",
+        "link": "https://www.langchain.com/langgraph",
+        "snippet": "Learn the basics of LangGraph in this LangChain Academy Course. You'll learn about how to leverage state, memory, human-in-the-loop, and more for your agents.",
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "AI research assistant tools 2026",
+    "results": [
+      {
+        "title": "Best AI for Researchers in 2026: 10 Tools Compared by ...",
+        "link": "https://papersflow.ai/blog/best-ai-for-researchers-2026",
+        "snippet": "We tested 10 AI tools across 5 research categories: discovery, analysis, writing, presentation, and general AI. No single tool does everything. Elicit leads for ...",
+        "position": 1
+      },
+      {
+        "title": "7 Best AI Research Assistants (2026): Hallucination-Verified",
+        "link": "https://www.atlasworkspace.ai/blog/best-ai-research-assistants",
+        "snippet": "AI research assistants benchmarked on a 200-paper corpus, citation accuracy, hallucination-to-verification ratio, synthesis depth, and price-per-query.",
+        "position": 2
+      },
+      {
+        "title": "AI Tools for Research in 2026: Literature Review, Analysis ...",
+        "link": "https://www.zerve.ai/blog/ai-tools-for-research",
+        "snippet": "Top AI Tools for Research in 2026. Compare the best AI tools for research in 2026, from literature review assistants to data analysis platforms.",
+        "date": "May 18, 2026",
+        "position": 3
+      }
+    ]
+  },
+  {
+    "query": "academic AI agent frameworks comparison",
+    "results": [
+      {
+        "title": "Comparing Open-Source AI Agent Frameworks",
+        "link": "https://langfuse.com/blog/2025-03-19-ai-agent-comparison",
+        "snippet": "Compare the leading open-source AI agent frameworks in 2026, including LangGraph, OpenAI Agents SDK, Claude Agent SDK, Google ADK, ...",
+        "date": "Jul 13, 2026",
+        "position": 1
+      },
+      {
+        "title": "Top AI Agent Frameworks in 2026: A Production-Ready ...",
+        "link": "https://pub.towardsai.net/top-ai-agent-frameworks-in-2026-a-production-ready-comparison-7ba5e39ad56d",
+        "snippet": "Quick-reference comparison of every major AI agent framework in 2026 — evaluated across 7 enterprise deployments in healthcare, logistics, ...",
+        "date": "Apr 1, 2026",
+        "position": 2
+      },
+      {
+        "title": "Complete guide to agentic AI frameworks: Comparison ... - Moxo",
+        "link": "https://www.moxo.com/blog/agentic-ai-framework-comparison",
+        "snippet": "Compare leading agentic AI frameworks for multi-agent orchestration, state management, and production readiness. Learn when to build vs ...",
+        "date": "Aug 12, 2026",
+        "position": 3
+      }
+    ]
+  }
+]

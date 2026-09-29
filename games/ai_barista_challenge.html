@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 AI 咖啡師挑戰 | Openhing</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Arial', sans-serif; background: linear-gradient(135deg, #2c1810, #4a2c17); color: white; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+header { text-align: center; padding: 20px; width: 100%; background: rgba(0,0,0,0.3); }
+h1 { font-size: 2em; margin-bottom: 5px; }
+.subtitle { opacity: 0.8; font-size: 0.9em; }
+#game-container { width: 90%; max-width: 600px; margin: 20px auto; }
+#customer-card { background: white; color: #333; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+.customer-name { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }
+.order-text { font-size: 1.1em; background: #f5f5f5; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.timer-bar { height: 8px; background: #ddd; border-radius: 4px; overflow: hidden; }
+.timer-fill { height: 100%; background: linear-gradient(90deg, #ff6b6b, #ffa502); transition: width 0.1s linear; }
+#coffee-station { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
+.stations-title { text-align: center; margin-bottom: 15px; font-size: 1.1em; }
+.stations-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.station-btn { background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 1em; transition: transform 0.2s, box-shadow 0.2s; }
+.station-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+.station-btn:active { transform: scale(0.95); }
+.station-btn .emoji { font-size: 1.5em; display: block; margin-bottom: 5px; }
+#score-panel { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin-top: 15px; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.8em; opacity: 0.7; }
+.score-value { font-size: 1.5em; font-weight: bold; }
+#result-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+#result-card { background: white; color: #333; border-radius: 20px; padding: 30px; text-align: center; max-width: 400px; width: 90%; }
+.result-emoji { font-size: 4em; margin-bottom: 10px; }
+.result-title { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
+.result-score { font-size: 2em; color: #667eea; margin-bottom: 15px; }
+.next-btn { background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 15px 40px; border-radius: 10px; cursor: pointer; font-size: 1.1em; }
+.next-btn:hover { opacity: 0.9; }
+.game-over { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+.instructions { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: center; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<header>
+<h1>🤖 AI 咖啡師挑戰</h1>
+<p class="subtitle">Openhing Game Trial | 按順序點擊正確步驟！</p>
+</header>
+
+<div id="game-container">
+<div class="instructions">
+💡 根據客戶訂單，按<strong>正確順序</strong>點擊咖啡製作步驟！
+</div>
+
+<div id="customer-card">
+<div class="customer-name" id="customer-name">👤 客戶</div>
+<div class="order-text" id="order-text">載入中...</div>
+<div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+</div>
+
+<div id="coffee-station">
+<div class="stations-title">☕ 咖啡站</div>
+<div class="stations-grid" id="stations-grid"></div>
+<div id="score-panel">
+<div class="score-item">
+<div class="score-label">分數</div>
+<div class="score-value" id="score">0</div>
+</div>
+<div class="score-item">
+<div class="score-label">連勝</div>
+<div class="score-value" id="streak">0</div>
+</div>
+<div class="score-item">
+<div class="score-label">回合</div>
+<div class="score-value" id="round">1/10</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="result-overlay">
+<div id="result-card">
+<div class="result-emoji" id="result-emoji">🎉</div>
+<div class="result-title" id="result-title">完成!</div>
+<div class="result-score" id="result-score">+100</div>
+<button class="next-btn" id="next-btn">下一位客戶 ➡️</button>
+</div>
+</div>
+
+<script>
+const COFFEE_TYPES = [
+  {
+    name: "美式咖啡",
+    order: "我要一杯簡單嘅黑咖啡",
+    steps: ["研磨咖啡豆", "加入熱水", "攪拌"],
+    emoji: "☕"
+  },
+  {
+    name: "拿鐵",
+    order: "我想要一杯拿鐵，要綿密奶泡",
+    steps: ["研磨咖啡豆", "萃取濃縮咖啡", "加入牛奶", "打奶泡", "倒入杯中"],
+    emoji: "🥛"
+  },
+  {
+    name: "卡布奇諾",
+    order: "來杯卡布奇諾，多啲奶泡",
+    steps: ["研磨咖啡豆", "萃取濃縮咖啡", "打奶泡", "加入牛奶", "倒入杯中"],
+    emoji: "☕"
+  },
+  {
+    name: "摩卡",
+    order: "我想飲摩卡，要巧克力味",
+    steps: ["研磨咖啡豆", "加入朱古力醬", "萃取濃縮咖啡", "加入牛奶", "加忌廉"],
+    emoji: "🍫"
+  },
+  {
+    name: "冰咖啡",
+    order: "今日好熱，整杯冰咖啡啦",
+    steps: ["研磨咖啡豆", "萃取濃縮咖啡", "加入冰块", "加入冷水"],
+    emoji: "🧊"
+  },
+  {
+    name: "焦糖瑪奇朵",
+    order: "來杯焦糖瑪奇朵",
+    steps: ["加入焦糖醬", "萃取濃縮咖啡", "加入牛奶", "打奶泡", "淋上焦糖"],
+    emoji: "🍯"
+  }
+];
+
+const ALL_STATIONS = [
+  { id: "grind", label: "研磨咖啡豆", emoji: "⚙️" },
+  { id: "extract", label: "萃取濃縮咖啡", emoji: "💧" },
+  { id: "hot_water", label: "加入熱水", emoji: "🔥" },
+  { id: "milk", label: "加入牛奶", emoji: "🥛" },
+  { id: "froth", label: "打奶泡", emoji: "☁️" },
+  { id: "pour", label: "倒入杯中", emoji: "🫗" },
+  { id: "ice", label: "加入冰块", emoji: "🧊" },
+  { id: "cold_water", label: "加入冷水", emoji: "💦" },
+  { id: "chocolate", label: "加入朱古力醬", emoji: "🍫" },
+  { id: "cream", label: "加忌廉", emoji: "🍦" },
+  { id: "caramel", label: "加入焦糖醬", emoji: "🍯" },
+  { id: "stir", label: "攪拌", emoji: "🥄" }
+];
+
+let score = 0, streak = 0, round = 0, maxRounds = 10;
+let currentOrder = null, currentStepIndex = 0, timerInterval = null, timeLeft = 100;
+let gameActive = false;
+
+function init() {
+  const grid = document.getElementById('stations-grid');
+  grid.innerHTML = '';
+  ALL_STATIONS.forEach(station => {
+    const btn = document.createElement('button');
+    btn.className = 'station-btn';
+    btn.innerHTML = `<span class="emoji">${station.emoji}</span>${station.label}`;
+    btn.onclick = () => handleStationClick(station.id);
+    grid.appendChild(btn);
+  });
+  nextRound();
+}
+
+function nextRound() {
+  if (round >= maxRounds) {
+    showGameOver();
+    return;
+  }
+  
+  round++;
+  document.getElementById('round').textContent = `${round}/${maxRounds}`;
+  
+  // Random coffee type
+  currentOrder = COFFEE_TYPES[Math.floor(Math.random() * COFFEE_TYPES.length)];
+  
+  // Shuffle steps for display but keep correct order
+  const shuffledSteps = [...currentOrder.steps].sort(() => Math.random() - 0.5);
+  
+  document.getElementById('customer-name').textContent = `👤 第 ${round} 位客戶`;
+  document.getElementById('order-text').innerHTML = `${currentOrder.emoji} "${currentOrder.order}"`;
+  
+  currentStepIndex = 0;
+  timeLeft = 100;
+  gameActive = true;
+  
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  const fill = document.getElementById('timer-fill');
+  timerInterval = setInterval(() => {
+    timeLeft -= 1;
+    fill.style.width = timeLeft + '%';
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      gameActive = false;
+      showResult(false, "時間到！⏰");
+    }
+  }, 100);
+}
+
+function handleStationClick(stationId) {
+  if (!gameActive) return;
+  
+  const expectedStep = currentOrder.steps[currentStepIndex];
+  
+  // Map step names to IDs
+  const stepToId = {
+    "研磨咖啡豆": "grind",
+    "萃取濃縮咖啡": "extract",
+    "加入熱水": "hot_water",
+    "加入牛奶": "milk",
+    "打奶泡": "froth",
+    "倒入杯中": "pour",
+    "加入冰块": "ice",
+    "加入冷水": "cold_water",
+    "加入朱古力醬": "chocolate",
+    "加忌廉": "cream",
+    "加入焦糖醬": "caramel",
+    "攪拌": "stir"
+  };
+  
+  const expectedId = stepToId[expectedStep];
+  
+  if (stationId === expectedId) {
+    currentStepIndex++;
+    
+    if (currentStepIndex >= currentOrder.steps.length) {
+      // Complete!
+      gameActive = false;
+      clearInterval(timerInterval);
+      
+      const bonus = Math.floor(timeLeft / 10);
+      const points = 100 + bonus * 10;
+      streak++;
+      score += points;
+      
+      document.getElementById('score').textContent = score;
+      document.getElementById('streak').textContent = streak;
+      
+      showResult(true, `+${points}分`, bonus);
+    }
+  } else {
+    // Wrong step
+    streak = 0;
+    document.getElementById('streak').textContent = streak;
+    timeLeft -= 15;
+    document.getElementById('timer-fill').style.width = timeLeft + '%';
+    
+    // Shake animation
+    const card = document.getElementById('customer-card');
+    card.style.animation = 'shake 0.3s';
+    setTimeout(() => card.style.animation = '', 300);
+  }
+}
+
+function showResult(success, message, bonus = 0) {
+  const overlay = document.getElementById('result-overlay');
+  const card = document.getElementById('result-card');
+  
+  document.getElementById('result-emoji').textContent = success ? '🎉' : '😅';
+  document.getElementById('result-title').textContent = success ? '完美！' : '差啲！';
+  document.getElementById('result-score').textContent = message;
+  
+  card.className = success ? '' : 'game-over';
+  
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.onclick = () => {
+    overlay.style.display = 'none';
+    nextRound();
+  };
+  
+  overlay.style.display = 'flex';
+}
+
+function showGameOver() {
+  const overlay = document.getElementById('result-overlay');
+  const card = document.getElementById('result-card');
+  
+  document.getElementById('result-emoji').textContent = '🏆';
+  document.getElementById('result-title').textContent = '遊戲結束！';
+  document.getElementById('result-score').textContent = `總分: ${score}`;
+  
+  card.className = 'game-over';
+  
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.textContent = '重新開始 🔄';
+  nextBtn.onclick = () => {
+    score = 0; streak = 0; round = 0;
+    document.getElementById('score').textContent = '0';
+    document.getElementById('streak').textContent = '0';
+    overlay.style.display = 'none';
+    nextRound();
+  };
+  
+  overlay.style.display = 'flex';
+}
+
+// Add shake animation
+const style = document.createElement('style');
+style.textContent = '@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }';
+document.head.appendChild(style);
+
+init();
+</script>
+</body>
+</html>
