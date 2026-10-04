@@ -81,7 +81,7 @@ elif mode == "造句練習":
     if selected_idioms:
         for idiom in selected_idioms:
             st.write(f"**{idiom}**")
-            sentence = st.text_area(f"用「{idiom」造句", key=f"sentence_{idiom}")
+            sentence = st.text_area(f"用「{idiom}」造句", key=f"sentence_{idiom}")
             if st.button(f"提交 {idiom} 造句", key=f"submit_{idiom}"):
                 if len(sentence) > 10:
                     st.success("✅ 句子已提交！")
