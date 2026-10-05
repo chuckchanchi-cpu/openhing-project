@@ -23,8 +23,8 @@ jobs:
         run: |
           pip install streamlit requests
       
-      - name: Deploy to Streamlit Cloud
-        uses: streamlit/streamlit-apps-action@latest
+      - name: Trigger Streamlit Cloud redeploy
+        uses: stripe/streamlit-cloud-redeploy@v1
         with:
-          app-dir: .
-          secrets: ${{ secrets.STREAMLIT_SECRETS }}
+          app-name: openhing-project
+          api-token: ${{ secrets.STREAMLIT_CLOUD_TOKEN }}
