@@ -1,5 +1,7 @@
 import streamlit as st
 import random
+import json
+import requests
 
 st.set_page_config(page_title="🏸 Badminton Doubles Trainer", page_icon="🏸", layout="wide")
 
@@ -94,6 +96,8 @@ if 'birdy_best' not in st.session_state:
     st.session_state.birdy_best = 0
 if 'birdy_answers' not in st.session_state:
     st.session_state.birdy_answers = []
+if 'birdy_last_choice' not in st.session_state:
+    st.session_state.birdy_last_choice = None
 
 if 'pos_idx' not in st.session_state:
     st.session_state.pos_idx = 0
@@ -107,9 +111,161 @@ if 'pos_best' not in st.session_state:
     st.session_state.pos_best = 0
 if 'pos_answers' not in st.session_state:
     st.session_state.pos_answers = []
+if 'pos_last_choice' not in st.session_state:
+    st.session_state.pos_last_choice = None
 
 if 'ai_mode' not in st.session_state:
     st.session_state.ai_mode = False
+
+# ===== AI Analysis Function =====
+def analyze_with_ai(move_type, position, scenario_name, explanation):
+    """Call LLM API to analyze the move"""
+    
+    # Get API config from environment
+    api_key = st.secrets.get("SILRA_API_KEY", "") or st.secrets.get("OPENAI_API_KEY", "")
+    api_base = st.secrets.get("SILRA_API_URL", "https://api.silra.cn/v1/chat/completions")
+    model = st.secrets.get("MODEL_NAME", "deepseek-v4-flash")
+    
+    if not api_key:
+        return {"error": "API key not configured"}
+    
+    prompt = f"""You are a badminton doubles coach. Analyze this move and give feedback in Cantonese.
+
+Move Type: {move_type}
+Position: {position}
+Scenario: {scenario_name}
+Correct Strategy: {explanation}
+
+Please provide:
+1. Rating (Excellent/Good/Try Again/Poor)
+2. Brief explanation why
+3. One specific suggestion for improvement
+
+Keep it under 100 words. Use Cantonese."""
+
+    try:
+        response = requests.post(
+            api_base,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": "You are a friendly badminton doubles coach who speaks Cantonese."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 200,
+                "temperature": 0.7
+            },
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        else:
+            return f"API Error: {response.status_code}"
+            
+    except Exception as e:
+        return f"AI Error: {str(e)}"
+
+# ===== Generate Court Visualization HTML =====
+def generate_court_html(court_id, width=400, height=700, show_opponents=False, show_partner=False, 
+                       opponents=None, partner=None, best_zone=None, correct_pos=None,
+                       selected_pos=None, is_correct=None):
+    """Generate interactive SVG court with clickable zones"""
+    
+    svg_elements = f'''
+    <svg id="{court_id}" width="{width}" height="{height}" style="border: 3px solid white; border-radius: 10px; background: linear-gradient(to bottom, #1a8a3c, #0f5e2b); cursor: pointer;" onclick="handleCourtClick(event, '{court_id}')">
+        <!-- Net -->
+        <line x1="0" y1="{height/2}" x2="{width}" y2="{height/2}" stroke="#ffd43b" stroke-width="4"/>
+        
+        <!-- Service lines -->
+        <line x1="{width/2}" y1="0" x2="{width/2}" y2="{height}" stroke="white" stroke-width="2" opacity="0.5"/>
+        <line x1="0" y1="{height*0.15}" x2="{width}" y2="{height*0.15}" stroke="white" stroke-width="2" opacity="0.5"/>
+        <line x1="0" y1="{height*0.85}" x2="{width}" y2="{height*0.85}" stroke="white" stroke-width="2" opacity="0.5"/>
+        
+        <!-- Labels -->
+        <text x="{width/2}" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Opponents</text>
+        <text x="{width/2}" y="{height-20}" text-anchor="middle" fill="white" font-size="14" font-weight="bold">You</text>
+        
+        <!-- Best zone indicator -->
+    '''
+    
+    if best_zone:
+        cx = best_zone['x'] / 100 * width
+        cy = best_zone['y'] / 100 * height
+        r = best_zone['radius'] / 100 * min(width, height)
+        svg_elements += f'''
+        <circle cx="{cx}" cy="{cy}" r="{r}" fill="rgba(105, 219, 124, 0.3)" stroke="#69db7c" stroke-width="2" stroke-dasharray="5,5"/>
+        '''
+    
+    if correct_pos:
+        cx = correct_pos['x'] / 100 * width
+        cy = correct_pos['y'] / 100 * height
+        r = correct_pos['radius'] / 100 * min(width, height)
+        svg_elements += f'''
+        <circle cx="{cx}" cy="{cy}" r="{r}" fill="rgba(116, 192, 252, 0.3)" stroke="#74c0fc" stroke-width="2" stroke-dasharray="5,5"/>
+        '''
+    
+    # Add opponents
+    if show_opponents and opponents:
+        for opp in opponents:
+            x = opp['x'] / 100 * width
+            y = opp['y'] / 100 * height
+            svg_elements += f'''
+            <circle cx="{x}" cy="{y}" r="15" fill="#ff6b6b" stroke="white" stroke-width="2"/>
+            <text x="{x}" y="{y+5}" text-anchor="middle" fill="white" font-size="12">🔴</text>
+            '''
+    
+    # Add partner
+    if show_partner and partner:
+        x = partner['x'] / 100 * width
+        y = partner['y'] / 100 * height
+        svg_elements += f'''
+        <circle cx="{x}" cy="{y}" r="15" fill="#74c0fc" stroke="white" stroke-width="2"/>
+        <text x="{x}" y="{y+5}" text-anchor="middle" fill="white" font-size="12">🔵</text>
+        '''
+    
+    # Add selected position marker
+    if selected_pos:
+        sx = selected_pos[0] / 100 * width
+        sy = selected_pos[1] / 100 * height
+        color = "#69db7c" if is_correct else "#ff6b6b"
+        svg_elements += f'''
+        <circle cx="{sx}" cy="{sy}" r="12" fill="{color}" stroke="white" stroke-width="2"/>
+        <text x="{sx}" y="{sy+4}" text-anchor="middle" fill="white" font-size="10">{chr(10004 if is_correct else 10006)}</text>
+        '''
+    
+    svg_elements += '</svg>'
+    
+    return svg_elements
+
+# ===== JavaScript for interactive clicking =====
+js_code = """
+<script>
+let lastClickX = null;
+let lastClickY = null;
+
+function handleCourtClick(event, courtId) {
+    const svg = document.getElementById(courtId);
+    const rect = svg.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    
+    // Store coordinates for form submission
+    const xInput = document.querySelector(`input[data-court="${courtId}-x"]`);
+    const yInput = document.querySelector(`input[data-court="${courtId}-y"]`);
+    if (xInput && yInput) {
+        xInput.value = x.toFixed(1);
+        yInput.value = y.toFixed(1);
+        
+        // Trigger change event to update Streamlit
+        xInput.dispatchEvent(new Event('change'));
+        yInput.dispatchEvent(new Event('change'));
+    }
+}
+</script>
+"""
 
 # ===== UI Components =====
 st.title("🏸 Badminton Doubles Trainer")
@@ -138,32 +294,25 @@ with tabs[0]:
         st.subheader(f"Q{st.session_state.birdy_idx + 1}: {scenario['name']}")
         st.info(scenario['desc'])
         
-        # Visual representation using emoji/styling
-        st.write("**Court Visualization:**")
-        st.markdown("""
-        **Opponents (🔴):** Click below to place birdy in their court
-        
-        ```
-        🔴         🔴
-        ───────────────────── Net ─────────────────────
-        
-        You should click BELOW this line
-        ```
-        """)
-        
         # Display opponent positions
-        st.write("**Opponent Positions:**")
+        st.write("**Opponents:**")
         for i, opp in enumerate(scenario['opponents']):
             st.write(f"- Opponent {i+1}: ({opp['x']}%, {opp['y']}%)")
         
-        # Show best zone hint
-        best = scenario['best_zone']
-        st.info(f"💡 Hint: Try clicking around ({best['x']}%, {best['y']}%)")
+        # Show interactive court
+        court_html = generate_court_html(
+            "placement_court",
+            show_opponents=True,
+            opponents=scenario['opponents'],
+            best_zone=scenario['best_zone'],
+            selected_pos=st.session_state.birdy_last_choice,
+            is_correct=any(ans['question'] == st.session_state.birdy_idx + 1 and ans['correct'] for ans in st.session_state.birdy_answers) if any(ans['question'] == st.session_state.birdy_idx + 1 for ans in st.session_state.birdy_answers) else None
+        )
+        st.components.v1.html(court_html + js_code, height=750, scrolling=False)
         
-        # Simple number inputs for placement
-        st.write("**Where do you want to place the birdy?**")
-        click_x = st.number_input("X position (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0, key="click_x")
-        click_y = st.number_input("Y position (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0, key="click_y")
+        # Hidden inputs for coordinates
+        click_x = st.number_input("Selected X position (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0, key="click_x", help="Auto-updated when you click on the court")
+        click_y = st.number_input("Selected Y position (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0, key="click_y", help="Auto-updated when you click on the court")
         
         if st.button("Place Birdy 🎯"):
             x, y = click_x, click_y
@@ -171,7 +320,9 @@ with tabs[0]:
             # Validate court
             if y >= 47:
                 st.error("❌ This is YOUR court! Place it in the OPPONENT'S court (upper half).")
+                st.session_state.birdy_last_choice = None
             else:
+                best = scenario['best_zone']
                 dist = ((x - best['x'])**2 + (y - best['y'])**2)**0.5
                 good = dist <= best['radius']
                 
@@ -194,19 +345,22 @@ with tabs[0]:
                     "distance": dist
                 })
                 
+                # Update last choice for visualization
+                st.session_state.birdy_last_choice = (x, y)
+                
                 # Show explanation
                 st.info(f"💡 {scenario['explanation']}")
                 
                 # AI Analysis
                 if st.session_state.ai_mode:
-                    analysis = {
-                        "move_type": "placement",
-                        "position": (x, y),
-                        "rating": "✅ Excellent!" if good else "⚠️ Good try" if dist <= best['radius'] * 1.5 else "❌ Not ideal",
-                        "reason": "Perfect placement!" if good else "Decent placement but could be better.",
-                        "suggestion": "Keep this strategy against similar formations." if good else f"Try aiming closer to ({best['x']}, {best['y']}) for optimal coverage."
-                    }
-                    st.json(analysis)
+                    with st.spinner("🤖 AI analyzing your move..."):
+                        analysis = analyze_with_ai(
+                            "placement",
+                            (x, y),
+                            scenario['name'],
+                            scenario['explanation']
+                        )
+                    st.success(f"🤖 {analysis}")
         
         # Score display
         st.write(f"**Score:** {st.session_state.birdy_score} / {st.session_state.birdy_total} | **Best Streak:** {st.session_state.birdy_best}")
@@ -223,7 +377,7 @@ with tabs[0]:
         **Visual Guide:**
         - 🔴 Red circles = Opponents
         - 🟢 Green dashed circle = Best zone
-        - Try clicking near the open areas!
+        - Click anywhere on the court to see where you're placing the birdy
         """)
         
         st.subheader("Answer History")
@@ -250,24 +404,20 @@ with tabs[1]:
         st.write("**Partner Position:**")
         st.write(f"- Partner: ({scenario['partner']['x']}%, {scenario['partner']['y']}%)")
         
-        # Visual representation
-        st.markdown("""
-        **Court Visualization:**
-        
-        ```
-        Opponents
-        
-        ───────────────────── Net ─────────────────────
-        
-        👤 Partner at ({partner_x}%, {partner_y}%)
-        
-        Where should YOU stand?
-        ```
-        """.format(partner_x=scenario['partner']['x'], partner_y=scenario['partner']['y']))
+        # Show interactive court
+        court_html = generate_court_html(
+            "positioning_court",
+            show_partner=True,
+            partner=scenario['partner'],
+            correct_pos=scenario['correct_position'],
+            selected_pos=st.session_state.pos_last_choice,
+            is_correct=any(ans['question'] == st.session_state.pos_idx + 1 and ans['correct'] for ans in st.session_state.pos_answers) if any(ans['question'] == st.session_state.pos_idx + 1 for ans in st.session_state.pos_answers) else None
+        )
+        st.components.v1.html(court_html + js_code, height=750, scrolling=False)
         
         # Input for player position
-        pos_x = st.number_input("Your X position (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0, key="pos_x")
-        pos_y = st.number_input("Your Y position (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0, key="pos_y")
+        pos_x = st.number_input("Your X position (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0, key="pos_x", help="Auto-updated when you click on the court")
+        pos_y = st.number_input("Your Y position (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0, key="pos_y", help="Auto-updated when you click on the court")
         
         if st.button("Position Yourself 📍"):
             x, y = pos_x, pos_y
@@ -275,6 +425,7 @@ with tabs[1]:
             # Validate court
             if y <= 53:
                 st.error("❌ You must stand in YOUR court (lower half)!")
+                st.session_state.pos_last_choice = None
             else:
                 correct = scenario['correct_position']
                 dist = ((x - correct['x'])**2 + (y - correct['y'])**2)**0.2
@@ -299,19 +450,22 @@ with tabs[1]:
                     "distance": dist
                 })
                 
+                # Update last choice for visualization
+                st.session_state.pos_last_choice = (x, y)
+                
                 # Show explanation
                 st.info(f"💡 {scenario['explanation']}")
                 
                 # AI Analysis
                 if st.session_state.ai_mode:
-                    analysis = {
-                        "move_type": "positioning",
-                        "position": (x, y),
-                        "rating": "✅ Perfect positioning!" if good else "⚠️ Acceptable" if dist <= correct['radius'] * 1.5 else "❌ Poor positioning",
-                        "reason": "Great court coverage with your partner!" if good else "Reasonable positioning but could optimize coverage.",
-                        "suggestion": "Maintain this formation pattern." if good else f"Move closer to ({correct['x']}, {correct['y']}) for better defense."
-                    }
-                    st.json(analysis)
+                    with st.spinner("🤖 AI analyzing your position..."):
+                        analysis = analyze_with_ai(
+                            "positioning",
+                            (x, y),
+                            scenario['name'],
+                            scenario['explanation']
+                        )
+                    st.success(f"🤖 {analysis}")
         
         # Score display
         st.write(f"**Score:** {st.session_state.pos_score} / {st.session_state.pos_total} | **Best Streak:** {st.session_state.pos_best}")
@@ -327,8 +481,8 @@ with tabs[1]:
         
         **Visual Guide:**
         - 👤 Blue circle = Your partner
-        - 🟦 Blue dashed circle = Correct position
-        - Think about where the gaps are!
+        - 🔵 Blue dashed circle = Correct position
+        - Click anywhere on your court to see where you should stand
         """)
         
         st.subheader("Answer History")
@@ -344,11 +498,14 @@ col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("Next Scenario ➡️"):
         st.session_state.birdy_idx = (st.session_state.birdy_idx + 1) % len(BIRDY_SCENARIOS)
+        st.session_state.birdy_last_choice = None
         st.rerun()
 with col2:
     if st.button("Clear Answers 🗑️"):
         st.session_state.birdy_answers = []
         st.session_state.pos_answers = []
+        st.session_state.birdy_last_choice = None
+        st.session_state.pos_last_choice = None
         st.rerun()
 with col3:
     if st.button("Reset Scores 🔄"):
@@ -362,7 +519,9 @@ with col3:
         st.session_state.pos_best = 0
         st.session_state.birdy_answers = []
         st.session_state.pos_answers = []
+        st.session_state.birdy_last_choice = None
+        st.session_state.pos_last_choice = None
         st.rerun()
 
 st.markdown("---")
-st.markdown("💡 **Tip:** Use AI mode to get personalized feedback on your moves!")
+st.markdown("💡 **Tip:** Use AI mode to get personalized feedback on your moves! Click directly on the court to practice!")
