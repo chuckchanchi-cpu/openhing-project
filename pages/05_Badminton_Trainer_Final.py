@@ -247,54 +247,61 @@ with tabs[0]:
         )
         st.components.v1.html(court_html, height=750, scrolling=False)
         
-        # Create clickable grid buttons
+        # Create large clickable zones
         st.write("**Click on the court to place the birdy:**")
-        cols = st.columns(10)
         
-        for row in range(10):
-            for col in range(10):
-                x_pct = (col + 0.5) * 10
-                y_pct = (row + 0.5) * 10
+        # Top half (opponent court) - 2 rows of big buttons
+        top_cols = st.columns(8)
+        for col in range(8):
+            x_pct = (col + 0.5) * 12.5
+            btn_key = f"birdy_top_{col}"
+            if top_cols[col].button(f"🎯 Zone {col+1}", key=btn_key, use_container_width=True):
+                x, y = x_pct, 25  # Top half
                 
-                # Only make opponent court (top half) clickable for placement
-                if y_pct >= 47:
-                    continue
+                best = scenario['best_zone']
+                good, dist, _ = check_placement(x, y, scenario)
                 
-                btn_key = f"birdy_{row}_{col}"
-                if st.button(f"{int(x_pct)}%", key=btn_key, help=f"Place at ({x_pct:.0f}%, {y_pct:.0f}%)"):
-                    x, y = x_pct, y_pct
-                    
-                    best = scenario['best_zone']
-                    good, dist, _ = check_placement(x, y, scenario)
-                    
-                    st.session_state.birdy_total += 1
-                    if good:
-                        st.session_state.birdy_score += 1
-                        st.session_state.birdy_streak += 1
-                        if st.session_state.birdy_streak > st.session_state.birdy_best:
-                            st.session_state.birdy_best = st.session_state.birdy_streak
-                        st.success("✅ Correct! Great placement!")
-                    else:
-                        st.session_state.birdy_streak = 0
-                        st.warning(f"⚠️ Could be better. Distance from optimal: {dist:.1f}%. Think about where the opponents' gaps are.")
-                    
-                    # Store answer
-                    st.session_state.birdy_answers.append({
-                        "question": st.session_state.birdy_idx + 1,
-                        "answer": (x, y),
-                        "correct": good,
-                        "distance": dist
-                    })
-                    
-                    # Update result for visualization
-                    st.session_state.birdy_answered = True
-                    st.session_state.birdy_result = {"answer": (x, y), "correct": good, "distance": dist}
-                    
-                    # Show explanation
-                    st.info(f"💡 {scenario['explanation']}")
-                    
-                    # Rerun to update visualization
-                    st.rerun()
+                st.session_state.birdy_total += 1
+                if good:
+                    st.session_state.birdy_score += 1
+                    st.session_state.birdy_streak += 1
+                    if st.session_state.birdy_streak > st.session_state.birdy_best:
+                        st.session_state.birdy_best = st.session_state.birdy_streak
+                    st.success("✅ Correct! Great placement!")
+                else:
+                    st.session_state.birdy_streak = 0
+                    st.warning(f"⚠️ Could be better. Distance from optimal: {dist:.1f}%. Think about where the opponents' gaps are.")
+                
+                # Store answer
+                st.session_state.birdy_answers.append({
+                    "question": st.session_state.birdy_idx + 1,
+                    "answer": (x, y),
+                    "correct": good,
+                    "distance": dist
+                })
+                
+                # Update result for visualization
+                st.session_state.birdy_answered = True
+                st.session_state.birdy_result = {"answer": (x, y), "correct": good, "distance": dist}
+                
+                # Show explanation
+                st.info(f"💡 {scenario['explanation']}")
+                
+                # Rerun to update visualization
+                st.rerun()
+        
+        # Bottom half (your court) - 2 rows of big buttons
+        bottom_cols = st.columns(8)
+        for col in range(8):
+            x_pct = (col + 0.5) * 12.5
+            btn_key = f"birdy_bottom_{col}"
+            if bottom_cols[col].button(f"❌ Your Court", key=btn_key, use_container_width=True):
+                x, y = x_pct, 75  # Bottom half
+                
+                st.error("❌ This is YOUR court! Place it in the OPPONENT'S court (top half).")
+                st.session_state.birdy_answered = True
+                st.session_state.birdy_result = {"answer": (x, y), "correct": False, "distance": 0}
+                st.rerun()
         
         # Score display
         st.write(f"**Score:** {st.session_state.birdy_score} / {st.session_state.birdy_total} | **Best Streak:** {st.session_state.birdy_best}")
@@ -349,54 +356,61 @@ with tabs[1]:
         )
         st.components.v1.html(court_html, height=750, scrolling=False)
         
-        # Create clickable grid buttons
+        # Create large clickable zones
         st.write("**Click on the court to choose your position:**")
-        cols = st.columns(10)
         
-        for row in range(10):
-            for col in range(10):
-                x_pct = (col + 0.5) * 10
-                y_pct = (row + 0.5) * 10
+        # Top half (opponent court) - 2 rows of big buttons
+        top_cols = st.columns(8)
+        for col in range(8):
+            x_pct = (col + 0.5) * 12.5
+            btn_key = f"pos_top_{col}"
+            if top_cols[col].button(f"❌ Opponent Court", key=btn_key, use_container_width=True):
+                x, y = x_pct, 25  # Top half
                 
-                # Only make your court (bottom half) clickable for positioning
-                if y_pct <= 53:
-                    continue
+                st.error("❌ You must stand in YOUR court (lower half)!")
+                st.session_state.pos_answered = True
+                st.session_state.pos_result = {"answer": (x, y), "correct": False, "distance": 0}
+                st.rerun()
+        
+        # Bottom half (your court) - 2 rows of big buttons
+        bottom_cols = st.columns(8)
+        for col in range(8):
+            x_pct = (col + 0.5) * 12.5
+            btn_key = f"pos_bottom_{col}"
+            if bottom_cols[col].button(f" Zone {col+1}", key=btn_key, use_container_width=True):
+                x, y = x_pct, 75  # Bottom half
                 
-                btn_key = f"pos_{row}_{col}"
-                if st.button(f"{int(x_pct)}%", key=btn_key, help=f"Stand at ({x_pct:.0f}%, {y_pct:.0f}%)"):
-                    x, y = x_pct, y_pct
-                    
-                    correct = scenario['correct_position']
-                    good, dist, _ = check_positioning(x, y, scenario)
-                    
-                    st.session_state.pos_total += 1
-                    if good:
-                        st.session_state.pos_score += 1
-                        st.session_state.pos_streak += 1
-                        if st.session_state.pos_streak > st.session_state.pos_best:
-                            st.session_state.pos_best = st.session_state.pos_streak
-                        st.success("✅ Perfect positioning! Great court coverage!")
-                    else:
-                        st.session_state.pos_streak = 0
-                        st.warning(f"⚠️ Could optimize coverage. Distance from optimal: {dist:.1f}%. Think about covering open areas.")
-                    
-                    # Store answer
-                    st.session_state.pos_answers.append({
-                        "question": st.session_state.pos_idx + 1,
-                        "answer": (x, y),
-                        "correct": good,
-                        "distance": dist
-                    })
-                    
-                    # Update result for visualization
-                    st.session_state.pos_answered = True
-                    st.session_state.pos_result = {"answer": (x, y), "correct": good, "distance": dist}
-                    
-                    # Show explanation
-                    st.info(f"💡 {scenario['explanation']}")
-                    
-                    # Rerun to update visualization
-                    st.rerun()
+                correct = scenario['correct_position']
+                good, dist, _ = check_positioning(x, y, scenario)
+                
+                st.session_state.pos_total += 1
+                if good:
+                    st.session_state.pos_score += 1
+                    st.session_state.pos_streak += 1
+                    if st.session_state.pos_streak > st.session_state.pos_best:
+                        st.session_state.pos_best = st.session_state.pos_streak
+                    st.success("✅ Perfect positioning! Great court coverage!")
+                else:
+                    st.session_state.pos_streak = 0
+                    st.warning(f"⚠️ Could optimize coverage. Distance from optimal: {dist:.1f}%. Think about covering open areas.")
+                
+                # Store answer
+                st.session_state.pos_answers.append({
+                    "question": st.session_state.pos_idx + 1,
+                    "answer": (x, y),
+                    "correct": good,
+                    "distance": dist
+                })
+                
+                # Update result for visualization
+                st.session_state.pos_answered = True
+                st.session_state.pos_result = {"answer": (x, y), "correct": good, "distance": dist}
+                
+                # Show explanation
+                st.info(f"💡 {scenario['explanation']}")
+                
+                # Rerun to update visualization
+                st.rerun()
         
         # Score display
         st.write(f"**Score:** {st.session_state.pos_score} / {st.session_state.pos_total} | **Best Streak:** {st.session_state.pos_best}")
