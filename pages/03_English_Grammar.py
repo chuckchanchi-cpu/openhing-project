@@ -6,6 +6,41 @@ st.set_page_config(page_title="🔤 English Grammar Trainer", page_icon="🔤", 
 # ===== English Grammar Exercises Data =====
 
 GRAMMAR_EXERCISES = {
+    "Look and Write: 看圖寫作": {
+        "description": "看圖片寫出完整句子，每句不少於5個字",
+        "questions": [
+            {
+                "question": "Look at the classroom picture. Write a sentence using 'This is...'",
+                "hint": "用 'This is' 開頭，描述圖片中嘅一件物品或一個人",
+                "answer": "This is a teacher.",
+                "explanation": "用 'This is' 描述單數事物。例如：This is a teacher. (呢個係一位老師。)"
+            },
+            {
+                "question": "Look at the classroom picture. Write a sentence using 'These are...'",
+                "hint": "用 'These are' 開頭，描述圖片中嘅多件物品或多個人",
+                "answer": "These are students.",
+                "explanation": "用 'These are' 描述複數事物。例如：These are students. (呢啲係學生。)"
+            },
+            {
+                "question": "Write a sentence about yourself using 'I am...'",
+                "hint": "用 'I am' 介紹自己，可以寫年齡、名字或感受",
+                "answer": "I am a student.",
+                "explanation": "用 'I am' 介紹自己。例如：I am a student. (我係一個學生。)"
+            },
+            {
+                "question": "Write a sentence about something you like using 'I like...'",
+                "hint": "用 'I like' 表達鍾意嘅嘢，可以係食物、活動或顏色",
+                "answer": "I like pizza.",
+                "explanation": "用 'I like' 表達喜好。例如：I like pizza. (我鍾意食 pizza。)"
+            },
+            {
+                "question": "Look at the picture. Write 3 sentences about what you see.",
+                "hint": "用 'This is', 'These are', 'I am', 'I like' 等句型",
+                "answer": "This is a classroom. These are desks. I am a student.",
+                "explanation": "結合多個句型描述圖片。每句至少5個字。"
+            }
+        ]
+    },
     "Grammar 1: so (原因和結果)": {
         "description": "用 so 連接原因和結果句子",
         "questions": [
@@ -90,7 +125,7 @@ GRAMMAR_EXERCISES = {
 }
 
 st.title("🔤 English Grammar Trainer")
-st.markdown("### Unit 1 & 2 Grammar Practice")
+st.markdown("### Grammar Practice + Look and Write")
 
 # 選擇練習模式
 selected_topic = st.selectbox(
@@ -128,4 +163,4 @@ if selected_topic:
             st.info(q["explanation"])
 
 st.markdown("---")
-st.markdown("💡 **Tip:** 記住規則：\n- **so** = 所以（結果），前面加逗號\n- **so that** = 以便（目的），後常有 can/will\n- **because** = 因為（原因）")
+st.markdown("💡 **Tips:**\n- **Look and Write**: 睇圖寫句，每句至少5個字，用 'This is/These are/I am/I like' 等句型\n- **so** = 所以（結果），前面加逗號\n- **so that** = 以便（目的），後常有 can/will\n- **because** = 因為（原因）")
