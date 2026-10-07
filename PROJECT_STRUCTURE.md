@@ -25,8 +25,8 @@ openedujustan/
 ├── 📂 pages/                          # Streamlit multi-page apps
 │   ├── 03_English_Grammar.py          # English grammar practice
 │   ├── 04_成語練習.py                  # 成語 (idioms) practice
-│   ├── 05_Badminton_Trainer_Final.py  # Badminton trainer
-│   ├── 06_分數乘法.py                  # Fraction multiplication
+│   ├── 05_2026-10-06_Badminton_Trainer.py  # Badminton trainer
+│   ├── 06_2026-10-06_分數乘法.py      # Fraction multiplication
 │   └── 07_巴士速練.py                  # Bus speed practice
 │
 ├── 📂 python-quest/                   # 🐍 Learning Hub (separate repo)
