@@ -7,8 +7,8 @@ st.set_page_config(page_title="📝 OpenEduJustan 申請系統", page_icon="📝
 
 # Silra API Configuration
 SILRA_API_URL = "https://api.silra.cn/v1/chat/completions"
-SILRA_API_KEY = "sk-L4fIuygz7Y4ZR7TV24mG7btCldqcU13Mx0ykoPiF0JNlPyNq"
-MODEL = "deepseek-v4-flash"
+SILRA_API_KEY = "sk-HfiuPr1xWenSQUsB5x0PPtHW3gVYN9MBUXTVQ67orNPED24y"
+MODEL = "qwen3.8-flash"
 
 def get_ai_suggestion(current_text, prompt_type):
     """Get AI suggestion for writing assistance"""

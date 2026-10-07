@@ -1,29 +1,18 @@
-# 排除圖片素材文件夾
-Chinese/materials/
-English/materials/
-General_Studies/materials/
-Maths/materials/
-Guidance/materials/
-Arts/materials/
-Music/materials/
-Sports/materials/
+# Backup files
+*.backup-*
+*.backup
 
-# 排除系統文件
-.DS_Store
-Thumbs.db
-
-# 排除 Google Form 腳本 (唔需要版本控制)
-google_form_*.js
-google_form_*.csv
-
-# 排除學生作答記錄 (定期生成，唔需要存 Git)
-*_反饋*.md
-*_結果*.md
-
-# 排除 Python 緩存
+# Python
 __pycache__/
 *.pyc
 *.pyo
 
-# 排除 Streamlit 狀態文件
-.streamlit/
+# macOS
+.DS_Store
+
+# Submodule (python-quest has its own repo)
+python-quest/
+
+# Temp files
+*.tmp
+*.swp

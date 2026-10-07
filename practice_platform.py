@@ -10,7 +10,7 @@ st.set_page_config(page_title="🎓 OpenEduJustan 練習平台", page_icon="🎓
 # Silra API Configuration
 SILRA_API_URL = "https://api.silra.cn/v1/chat/completions"
 SILRA_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-HfiuPr1xWenSQUsB5x0PPtHW3gVYN9MBUXTVQ67orNPED24y")
-MODEL = "deepseek-chat"
+MODEL = "qwen3.8-flash"
 
 # Mac mini folder paths
 BASE_DIR = Path.home() / "Desktop" / "openedujustan"

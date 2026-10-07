@@ -11,13 +11,13 @@ GRAMMAR_EXERCISES = {
         "questions": [
             {
                 "question": "Look at the classroom picture. Write a sentence using 'This is...'",
-                "hint": "用 'This is' 開頭，描述圖片中嘅一件物品或一個人",
+                "hint": "以 'This is' 開頭，描述圖片中的一件物品或一個人",
                 "answer": "This is a teacher.",
                 "explanation": "用 'This is' 描述單數事物。例如：This is a teacher. (呢個係一位老師。)"
             },
             {
                 "question": "Look at the classroom picture. Write a sentence using 'These are...'",
-                "hint": "用 'These are' 開頭，描述圖片中嘅多件物品或多個人",
+                "hint": "以 'These are' 開頭，描述圖片中的多件物品或多個人",
                 "answer": "These are students.",
                 "explanation": "用 'These are' 描述複數事物。例如：These are students. (呢啲係學生。)"
             },
@@ -29,7 +29,7 @@ GRAMMAR_EXERCISES = {
             },
             {
                 "question": "Write a sentence about something you like using 'I like...'",
-                "hint": "用 'I like' 表達鍾意嘅嘢，可以係食物、活動或顏色",
+                "hint": "使用 'I like' 表達喜歡的事物，可以是食物、活動或顏色",
                 "answer": "I like pizza.",
                 "explanation": "用 'I like' 表達喜好。例如：I like pizza. (我鍾意食 pizza。)"
             },
@@ -46,25 +46,25 @@ GRAMMAR_EXERCISES = {
         "questions": [
             {
                 "question": "I want to help the homeless. I prepare meals for them sometimes.",
-                "hint": "用 so 連接兩個句子，前面加逗號",
+                "hint": "使用 so 連接兩個句子，前面加逗號",
                 "answer": "I want to help the homeless, so I prepare meals for them sometimes.",
                 "explanation": "原因：想幫助無家可歸者 → 結果：幫他們準備食物"
             },
             {
                 "question": "Chris likes helping blind people. He will sell flags next month.",
-                "hint": "用 so 連接，注意逗號位置",
+                "hint": "使用 so 連接，注意逗號位置",
                 "answer": "Chris likes helping blind people, so he will sell flags next month.",
                 "explanation": "原因：喜歡幫助盲人 → 結果：賣旗籌款"
             },
             {
                 "question": "Karen is good at cooking. She helps her mother prepare food for the party.",
-                "hint": "用 so 連接因果關係",
+                "hint": "使用 so 連接因果關係",
                 "answer": "Karen is good at cooking, so she helps her mother prepare food for the party.",
                 "explanation": "原因：擅長煮餸 → 結果：幫媽媽準備食物"
             },
             {
                 "question": "The dog needs a home. We adopt it from the SPCA.",
-                "hint": "用 so 連接",
+                "hint": "使用 so 連接",
                 "answer": "The dog needs a home, so we adopt it from the SPCA.",
                 "explanation": "原因：狗狗需要家 → 結果：從 SPCA 領養"
             }
@@ -75,25 +75,25 @@ GRAMMAR_EXERCISES = {
         "questions": [
             {
                 "question": "We can support a food charity. It prepares food for people in need.",
-                "hint": "charity 是物，用 which",
+                "hint": "charity 是機構，使用 which",
                 "answer": "We can support a food charity which prepares food for people in need.",
                 "explanation": "charity = 物 → 用 which"
             },
             {
                 "question": "We can visit sick children. They are in hospital.",
-                "hint": "children 是人，用 who",
+                "hint": "children 是人，使用 who",
                 "answer": "We can visit sick children who are in hospital.",
                 "explanation": "children = 人 → 用 who"
             },
             {
                 "question": "I know a boy. He collects money for blind people.",
-                "hint": "boy 是人，用 who",
+                "hint": "boy 是人，使用 who",
                 "answer": "I know a boy who collects money for blind people.",
                 "explanation": "boy = 人 → 用 who"
             },
             {
                 "question": "I have a pet cat. It was adopted from the SPCA.",
-                "hint": "cat 是動物，用 which",
+                "hint": "cat 是動物，使用 which",
                 "answer": "I have a pet cat which was adopted from the SPCA.",
                 "explanation": "cat = 動物 → 用 which"
             }
