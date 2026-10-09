@@ -55,7 +55,7 @@ def load_md_context(subject, grade):
                         file_content = f.read()
                         # Only include recent files (last 30 days) to avoid outdated content
                         if datetime.fromtimestamp(file_path.stat().st_mtime) >= cutoff_date:
-                            content += f"\n\n## File: {file_path.name}\n{file_content[:2000]}\n"  # Limit content per file
+                            content += f"\n\n## File: {file_path.name}\n{file_content[:5000]}\n"  # Increased limit per file
                             md_files.append(str(file_path))
                 except Exception as e:
                     st.warning(f"⚠️ 讀取文件失敗: {file_path.name}")
@@ -92,7 +92,7 @@ def generate_questions(subject, grade, topic, count=5):
 6. **使用以下學生姓名讓題目更親切：{', '.join(STUDENT_NAMES)}**
 
 **提供的 MD 檔案內容：**
-{md_content[:5000]}
+{md_content[:20000]}
 
 **生成要求：**
 1. 題目要清晰、具體，適合{grade}學生水平
