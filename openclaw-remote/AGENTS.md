@@ -1,6 +1,6 @@
-# OpenHing Project Context — VPN Computer (AI Worker)
+# OpenHing Project Context — ai1 (AI Worker)
 
-> 你係 openhing 項目嘅 AI worker（跑喺 Windows VPN computer）。呢個檔案係項目脈絡。
+> 你係 openhing 項目嘅 AI worker（跑喺 ai1（Windows VPN computer））。呢個檔案係項目脈絡。
 > 正本喺 Mac mini：`~/Desktop/openhing/PROJECT_CONTEXT.md` — 有更新時兩邊同步。
 > **重要**：`openedujustan` 係 openhing 嘅**其中一個 function**，唔係獨立項目。
 
@@ -22,8 +22,8 @@
 ## 🖥️ 機器佈局
 
 - **Mac mini**（ChuckdeMac-mini-4）：主開發機 + 主 agent — `~/Desktop/openhing/`、`~/Desktop/openedujustan/`
-- **呢部機**（Windows 11, VNC 113.10.159.97:20090）：AI worker — OpenClaw 2026.11.3 + qwen3.8-flash (Silra API)；無 admin（UAC 可經 VNC 確認）
-- **GitHub repo**：`chuckchanchi-cpu/openhing-project`（public）— 更新同步：mini push → 呢部機 download zip → `Expand-Archive` 解壓（⚠️ 內建 tar 會跳過中文檔名，唔好用）
+- **ai1**（Windows 11, VNC 113.10.159.97:20090）：AI worker — OpenClaw 2026.11.3 + qwen3.8-flash (Silra API)；無 admin（UAC 可經 VNC 確認）
+- **GitHub repo**：`chuckchanchi-cpu/openhing-project`（public）— 更新同步：mini push → ai1 download zip → `Expand-Archive` 解壓（⚠️ 內建 tar 會跳過中文檔名，唔好用）
 
 ## 📏 規則
 
