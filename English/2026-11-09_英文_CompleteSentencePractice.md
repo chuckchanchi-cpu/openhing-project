@@ -65,3 +65,29 @@
 
 ## 📁 儲存位置
 `~/Desktop/openedujustan/English/2026-11-09_英文_CompleteSentencePractice.md`
+
+---
+
+## 📝 學生習作批改記錄（2026-11-11 影到老師批改版）
+
+### Exercise 2 組句
+1. **Mum is stirring the soup.** ✅
+2. John goes on a walkathon ⚠️（漏句號）
+3. 初次寫錯次序 → 老師改：**We visit a centre which takes care of old people.** ✅（關係子句跟喺先行詞 a centre 後）
+
+### Exercise 3 完整句答題（老師批改）
+| # | 學生答案 | 判定 | 改正 |
+|---|---------|------|------|
+| 1 | We can donate money to help the victims. | ✅ | |
+| 2 | The word 'they' **refers** to the flood victims. | ✅（今次有寫 s！） | |
+| 3 | I first **come** to Hong Kong in 1993. | ❌ | **came**（did 提問→過去式） |
+| 4 | The information counter is behind the souvenir shop. | ✅（初稿詞序錯，改正咗） | 主語唔好拆散 |
+| 5 | The charity **helps** poor people. | ✅（有寫 s） | |
+| 6 | I like chocolate ice cream. | ✅ | |
+| 7 | Tom wants to help animals for the SPCA. | ❌ | **Tom does voluntary work for the SPCA because he wants to help animals.**（Why 要用 because 答） |
+| 8 | Oxfam gives food to help people. | ❌ | **Oxfam helps people by giving them food.**（三單 helps） |
+| 9 | I visit Taiwan once a year. | ✅ | |
+| 10 | It is 200 metres from our home to the post office. | ✅ | |
+| 11 | It takes 15 minutes to walk from our home to the gift shop. | ✅（takes ✓） | |
+
+**總結**：11 題中 8 題 ✅；錯誤集中在①過去式漏轉（come→came）②三單漏 s（give→gives）③Why 問句未用 because 結構答 — 同題庫歸納嘅三大易錯位完全一致 🎯
