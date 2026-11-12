@@ -1,0 +1,19 @@
+ROUND 4 FINAL VERDICT - OpenPanel Nvidia panel. You are seat 1 (Claude, governance/legal). Reply in written Cantonese. Keep under 450 words.
+
+NEW FACTS (verified 2026-11-12):
+1. Nov 12: Jensen Huang RESIGNED as President/CEO/board member effective immediately. CFO Colette Kress = interim CEO (keeps CFO role too). Harvey C. Jones (ex-Synopsys CEO) = first-ever Board Chair. Board starts permanent CEO search (internal+external). Q3 earnings still Nov 17 as scheduled.
+2. Nov 11 NYT: SECOND affair - Kimberly Powell, VP healthcare at Nvidia, a DIRECT REPORT of Jensen.
+3. Market: NVDA premarket -12% (~$151.6 vs close $173.73), BELOW 52-week low ($164.27). Stock -20% over past month.
+4. Analysts: Bernstein PT slashed $400 to $200. Oppenheimer DOWNGRADED and REMOVED price target (rare move for mega-cap). Questar CIO: stock "uninvestable" without succession plan. Bernstein Rasgon: "Jensen is Nvidia... who makes decisions for next 10 years?"
+5. Credit: NVDA 5y CDS jumped to ~144.5bp (near record, +3.25bp on the day). NVDA 2060 notes reported at distressed levels. ORCL CDS ~263bp, SpaceX ~203bp records. NVDA sold $25B bonds June 2026.
+6. Legal/political: Shareholder lawsuit filed in California (misleading investors re Alice Huang affair). Trump confirmed FBI investigating, called Jensen "honourable guy". Congress (both parties) probing; intel briefing left questions (spy vs "useful idiot"). Alice Huang reportedly back in China. Megaspeed suspected of diverting Nvidia chips to China.
+7. Round 3 bottom checklist scores were: Claude 2/6, ai1 4/6, Claw 2.5/6. Round 3 confirm-bottom event = Nov 17 earnings pass + stock AND CDS improve same day.
+
+ANSWER THESE 5:
+1. Has the event LANDED? Which Round 3 bottom conditions does the resignation solve (governance clarity? 8-K?) and which does it NOT solve?
+2. FINAL VERDICT: WAIT / BUY (accumulate) / HEDGE? One recommendation + confidence %. (Advice only, no real trades.)
+3. Timeline re-estimate: Nov 17 earnings - how does it run? Kress transition risk? FBI/investigation fallout?
+4. Re-score the 6 bottom checklist items (technical oversold / panic volume / governance clarity / CDS normalization / contagion pricing / event landing) each 0-1, total X/6 now.
+5. One sharp challenge question to the other two seats (ai1 quant seat, Claw strategy seat).
+
+Format: stance one line, then numbered answers, then your challenge question. Mark all probabilities as estimates.
