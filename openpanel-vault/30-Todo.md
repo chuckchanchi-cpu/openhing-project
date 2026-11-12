@@ -23,4 +23,4 @@
 - `OpenPanel_Trial3_Round3_BottomChecklist_2026-11-12.pdf`（charts 16-18）
 - 位置：mini `~/Desktop/openpanel/nvidia-trial/`
 
-相關：[[03-決策邏輯-流程]] ｜ [[13-Round3-底部清單]]
+相關：[[03-Logic-Flow]] ｜ [[13-Round3]]

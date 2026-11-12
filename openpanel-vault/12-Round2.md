@@ -33,4 +33,4 @@ H100 二手價 < $15k｜CoreWeave CDS > 1,500bp｜GPU mortgage spread 每周 >50
 ## 產出
 `OpenPanel_Trial3_Round2_StockBondCascade_2026-11-12.pdf` + charts 11-15
 
-→ 續談：[[13-Round3-底部清單]] ｜ 前文：[[11-Trial2-三席會審]]
+→ 續談：[[13-Round3]] ｜ 前文：[[11-Trial2]]

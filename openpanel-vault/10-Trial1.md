@@ -1,11 +1,11 @@
 # 10 — Trial #1：Nvidia / Jensen Huang（單 model 版）
 
 **日期**：2026-11-12 16:05 ｜ **議題**：Nvidia/Jensen 緋聞幾時解決？
-**形式**：MiMo 分飾三角（主持 + panel-bull + panel-bear sub-agents）— 後來被 Chuck 要求升級成真多 agent（見 [[02-架構-三席模式]]）
+**形式**：MiMo 分飾三角（主持 + panel-bull + panel-bear sub-agents）— 後來被 Chuck 要求升級成真多 agent（見 [[02-Architecture]]）
 
 ## 數據輸入（核實）
 - 事件：Jensen 承認婚外情，對象被指中國間諜（honeytrap）；FBI 調查；NYT 第二宗緋聞；WSJ 董事會準備炒人；11/12 董事會開會
-- 股價：$217.94 (10/27) → $173.73 (11/11)，一個月 -21.8%（後經 Claude 勘誤：間段 -20.3%，見 [[11-Trial2-三席會審]]）
+- 股價：$217.94 (10/27) → $173.73 (11/11)，一個月 -21.8%（後經 Claude 勘誤：間段 -20.3%，見 [[11-Trial2]]）
 - CDS：39bp (2025底) → 82bp (7月) → 127bp (10月底)，+226%
 - 基本面：Q2 收入 $96.2B (+106%)，DC $89B；Q3 指引 $108B±2%（11/17）；NTM P/E 21→16；存貨 $31.6B (+22%)
 
@@ -21,4 +21,4 @@
 `OpenPanel_Trial1_Nvidia_Jensen_2026-11-12.pdf`（10 頁圖為主）+ charts 1-8
 
 ## Trial #1 暴露嘅局限 → 改進
-同一 model 分飾多角有共同偏見風險 → Chuck 決定改三 AI 席位制（見 [[11-Trial2-三席會審]]）
+同一 model 分飾多角有共同偏見風險 → Chuck 決定改三 AI 席位制（見 [[11-Trial2]]）

@@ -25,9 +25,9 @@
 
 ## 技術備註
 - 三席全部經 MRC（VNC）驅動 ai1 機：Claude desktop app + PowerShell `openclaw agent`
-- vncdo 坑位見 [[21-工具與教訓]]
+- vncdo 坑位見 [[21-Tools-Lessons]]
 
 ## 產出
 `OpenPanel_Trial2_3AI_Panel_Nvidia_2026-11-12.pdf` + charts 9-10
 
-→ 續談：[[12-Round2-股債連鎖]]
+→ 續談：[[12-Round2]]

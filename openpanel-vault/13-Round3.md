@@ -31,4 +31,4 @@
 ## 產出
 `OpenPanel_Trial3_Round3_BottomChecklist_2026-11-12.pdf` + charts 16-18
 
-前文：[[12-Round2-股債連鎖]] ｜ 追蹤：[[30-待辦與追蹤]]
+前文：[[12-Round2]] ｜ 追蹤：[[30-Todo]]

@@ -24,6 +24,6 @@ Trial #1 用 MiMo 分飾三角 → 快但有**共同偏見**風險。Chuck 要�
 ## 事實紀錄
 - Trial #2 起：Claude 同 ai1 嘅對話係**連續劇式**（同一 chat / 同一 session key 續談）
 - Claude Code v2.1.322 已裝喺 mini 同 ai1（但 mini 直連 api.anthropic.com 403 — 香港區被擋，經 ai1 走 relay 先得）
-- vncdo 教訓見 [[21-工具與教訓]]
+- vncdo 教訓見 [[21-Tools-Lessons]]
 
-相關：[[01-OpenPanel-理念]] ｜ [[03-決策邏輯-流程]]
+相關：[[01-Concept]] ｜ [[03-Logic-Flow]]
