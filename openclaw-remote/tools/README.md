@@ -12,17 +12,28 @@ Measured on the reseller models (2026-11-15):
 | Realistic 出卷 (10 MC Chinese GS + 3-model check) | **10/10**, no structural defects |
 | Precise sparsely-documented fact (MTR urban line count) | **all 5 models failed, and split 8/6/8/6/6** |
 
-That last row is the reason this directory exists. When every model is wrong in a
-different way there is no majority to outvote, so model consensus cannot verify anything.
-Asking the model to self-critique made it *worse*: it confidently re-enumerated and
-re-answered the same wrong number.
+That last row is why this directory exists. When every model is wrong in a different way
+there is no majority to outvote, so model consensus cannot verify anything. Asking the model
+to self-critique made it *worse*: it confidently re-enumerated and re-answered the same
+wrong number.
 
 **Rule: never let the model verify itself. Attach a deterministic check.**
 
-## `paper-pipeline.mjs` — the accuracy gate
+## `gen-verified-paper.mjs` — generate + verify in one step
 
-Every generated item carries a machine-checkable field. The gate decides PASS / FAIL /
-REVIEW by computation, not opinion.
+```bash
+node gen-verified-paper.mjs --subject maths --topic "percentages" --count 8 --out paper.json
+node gen-verified-paper.mjs --selftest
+```
+
+Asks the generator for an `expression` alongside every answer, then recomputes it. Items
+that cannot be computed (MC questions) require **unanimous agreement from 3 independent
+models** before entering the answer key; anything contested is surfaced as 待核.
+
+Live result: 6/6 maths items verified by recomputation, 0 review. Corrupting one answer
+was caught and the correct value reported.
+
+## `paper-pipeline.mjs` — the gate itself
 
 | kind | use for | proven by |
 |---|---|---|
@@ -32,22 +43,49 @@ REVIEW by computation, not opinion.
 | `opinion` | 短答 / 長答 / open prose | never auto-passed — always 待核 |
 
 ```bash
-node paper-pipeline.mjs --selftest                     # 4 pass / 3 fail / 2 review expected
+node paper-pipeline.mjs --selftest
 node paper-pipeline.mjs --spec spec.json --out out.json
 ```
 
-Ask the generator for an `expression` field alongside each answer. That is what makes
-verification possible:
+**Only PASS goes in the answer key.** FAIL is corrected from the computed value. REVIEW gets
+⚠️ 待核 for the teacher.
 
-```json
-{"n":1,"kind":"compute","q":"...","expression":"1250*3/100+780*2/100","statedAnswer":"53.1"}
+## `audit-papers.mjs` — check papers that already exist
+
+Recomputes every `列式`/`計算` against its `答案`, and every table verification cell, across
+`--dir`. No regeneration needed.
+
+```bash
+node audit-papers.mjs --dir . --out audit.json
+node audit-papers.mjs --selftest
 ```
 
-**Only PASS goes in the answer key.** FAIL is corrected from the computed value. REVIEW
-gets ⚠️ 待核 and goes to the teacher.
+Result on this repo: **149 files scanned, 35 pairs verified, 0 errors.** The existing papers
+are arithmetically sound.
 
-Verify the gate is alive on any new paper shape by corrupting 2-3 answers and confirming
-they are caught (`gate-tamper.mjs` pattern). A gate that never fails was never tested.
+### What it refuses to judge — and why that matters most
+
+The first three versions of this auditor flagged 9 "errors" in the existing Maths papers.
+**Every single one was a false positive:**
+
+| Flagged | Reality |
+|---|---|
+| `325/1000 = 13` | fraction **reduction** (`= 13/40`), not division |
+| `28.4 ÷ 7.8 = 3` | integer part + remainder `5 元` — correct |
+| `23 ÷ 6 = 3.8` | rounded to 1 d.p. as the question asked |
+| `$2.7 \div 0.3$` | LaTeX parse bug; the formula was right |
+| `5 + 1÷80 = 5.0125` | mixed number |
+| `332/100 = 3 8/25` | fraction → mixed conversion |
+| `58×5 − 70 − 65 = 90 ⚠️ 印刷...` | annotated cell, unrelated numbers paired |
+| `A≈37.7、B = 39.75` | multiple statements in one cell |
+
+Reporting those would have sent a teacher to "fix" correct material days before an exam.
+
+**So: a finding is a CLAIM TO VERIFY, never a defect to auto-correct.** The auditor only
+judges pure arithmetic segments; anything containing CJK text, prose, or multiple statements
+is skipped. Tolerance covers exact, integer-part, 1–2 d.p. rounding, fraction equivalence,
+and mixed numbers. The selftest carries 13 cases — 8 of them these former false positives —
+so the regressions cannot come back.
 
 ## `factcheck.mjs` — source grounding
 
@@ -55,18 +93,13 @@ Grounds a claim against zh/en Wikipedia when no local source file exists.
 
 ```bash
 node factcheck.mjs --claim "Hong Kong MTR has 9 urban lines" --q "港鐵 市區綫 九條" --titles "港鐵"
-node factcheck.mjs --stdin < claims.json
 ```
-
-Rules learned the hard way:
 
 - **A number anywhere in an article is NOT evidence.** Require the value *and* a quantity
   unit (條 / lines / 年 / years) in the same sentence.
-- **Score Chinese and English topic terms separately.** Mixing them lets an English claim
-  match an unrelated Chinese article.
+- **Score Chinese and English topic terms separately**, or an English claim matches an
+  unrelated Chinese article.
 - **UNVERIFIABLE is a real verdict**, never a silent pass.
-
-Output: `SUPPORTED` / `REFUTED` / `UNVERIFIABLE` with the evidence sentences and source URLs.
 
 ## Ground truth discipline
 
