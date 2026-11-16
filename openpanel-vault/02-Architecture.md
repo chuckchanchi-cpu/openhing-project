@@ -2,11 +2,11 @@
 
 ## 席位設計（Chuck 指定：唔同 AI agent 各坐一位）
 
-| 席位 | Agent | Model | 專長視角 | 接入方法 |
-|------|-------|-------|---------|---------|
-| Seat A | **Claude** | Opus 5.5（ai1 機 desktop「Claude.Ai2-HK」）| 治理/倫理/法律 | MRC 遠端打字 |
-| Seat B | **Claw** | MiMo v2.6 Pro（Mac mini）| 主持/數據/策略/綜合 | 本地 |
-| Seat C | **ai1** | qwen3.8-flash（ai1 機 OpenClaw）| 信貸/資金流/量化 | MRC → PowerShell `openclaw agent` |
+| 席位     | Agent      | Model                                  | 專長視角        | 接入方法                              |
+| ------ | ---------- | -------------------------------------- | ----------- | --------------------------------- |
+| Seat A | **Claude** | Opus 5.5（ai1 機 desktop「Claude.Ai2-HK」） | 治理/倫理/法律    | MRC 遠端打字                          |
+| Seat B | **Claw**   | MiMo v2.6 Pro（Mac mini）                | 主持/數據/策略/綜合 | 本地                                |
+| Seat C | **ai1**    | qwen3.8-flash（ai1 機 OpenClaw）          | 信貸/資金流/量化   | MRC → PowerShell `openclaw agent` |
 
 ## 重要設計決定
 

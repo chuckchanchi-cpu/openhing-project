@@ -6,6 +6,7 @@
 ## 🗺️ 導航
 
 ### 理念同架構
+- [[04-Conclusion-Derivation]] — ⭐ **結論點推導出嚟**（數據→推理→結論→權衡→反證）
 - [[01-Concept]] — 點解要多視角 + Human Stops
 - [[02-Architecture]] — Claude × Claw × ai1 席位設計
 - [[03-Logic-Flow]] — 每一 round 嘅標準 pipeline
