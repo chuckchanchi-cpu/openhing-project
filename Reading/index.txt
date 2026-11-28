@@ -7,4 +7,6 @@
 2026-11-23_閱讀_英文_Kandy_Sri_Lanka.md
 2026-11-24_閱讀_英文_AnimalsHumanNoise.md
 2026-11-24_閱讀_英文_HumanNoise_P6訓練版.md
+2026-11-28_閱讀_英文_SuperResistantFungus.md
+2026-11-28_閱讀_英文_SuperResistantFungus_P6.md
 README.md
